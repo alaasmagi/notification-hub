@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY Directory.Build.props ./
-COPY email-hub.sln ./
+COPY notification-hub.sln ./
 COPY Domain/Domain.csproj Domain/
 COPY Contracts/Contracts.csproj Contracts/
 COPY DTO/DTO.csproj DTO/
