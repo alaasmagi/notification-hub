@@ -1,1 +1,1 @@
-# email-hub
+# notification-hub

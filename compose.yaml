@@ -1,7 +1,7 @@
 services:
-  email-hub:
+  notification-hub:
     image: ${IMAGE_NAME}:${IMAGE_TAG}
-    container_name: email-hub
+    container_name: notification-hub
     restart: unless-stopped
     env_file:
       - .env

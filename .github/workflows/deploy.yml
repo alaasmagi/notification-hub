@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-email-hub
+  group: deploy-notification-hub
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: alaasmagi-email-hub
-  REMOTE_APP_DIR: /home/github-actions/infra/email-hub
+  IMAGE_NAME: alaasmagi-notification-hub
+  REMOTE_APP_DIR: /home/github-actions/infra/notification-hub
   APP_PORT: "2500"
   HOST_PORT: "2500"
 
