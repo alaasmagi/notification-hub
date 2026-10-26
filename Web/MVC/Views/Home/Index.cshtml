@@ -1,12 +1,12 @@
 @{
-    ViewData["Title"] = "Email Hub";
+    ViewData["Title"] = "Notification Hub";
 }
 
 @if (User.Identity?.IsAuthenticated == true)
 {
     <section class="eh-hero">
         <p class="kicker">Transactional email operations</p>
-        <h1>Email Hub</h1>
+        <h1>Notification Hub</h1>
         <p>A microservice for centralized transactional email routing, template rendering, sender management, and delivery review.</p>
         <div class="actions">
             <a class="btn btn--primary" asp-controller="Client" asp-action="Index">Open admin</a>
@@ -37,7 +37,7 @@ else
 {
     <section class="sign-in">
         <p class="kicker">Transactional email operations</p>
-        <h1>Email Hub</h1>
+        <h1>Notification Hub</h1>
         <p>Sign in with your platform account to manage clients, senders, templates and deliveries.</p>
         <a class="btn btn--primary" asp-controller="Account" asp-action="Login">Login</a>
         <p class="footnote">Access is limited to authenticated operators.</p>

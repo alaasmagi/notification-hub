@@ -9,11 +9,11 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <meta name="color-scheme" content="dark light"/>
-    <title>@ViewData["Title"] - Email Hub</title>
+    <title>@ViewData["Title"] - Notification Hub</title>
     <script>
         (function () {
             var theme = null;
-            try { theme = localStorage.getItem("emailHubTheme"); } catch (e) { }
+            try { theme = localStorage.getItem("notificationHubTheme"); } catch (e) { }
             if (theme !== "light" && theme !== "dark") {
                 theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
             }
@@ -34,8 +34,8 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__top">
                 <a class="brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    <span class="brand__mark" aria-hidden="true">EH</span>
-                    <span>Email Hub</span>
+                    <span class="brand__mark" aria-hidden="true">NH</span>
+                    <span>Notification Hub</span>
                 </a>
                 <button class="icon-btn menu-button" type="button" aria-controls="mainNavigation" aria-expanded="false" aria-label="Toggle navigation" data-menu-toggle>
                     <svg class="icon" aria-hidden="true"><use href="#i-menu"></use></svg>
@@ -83,7 +83,7 @@
                 @RenderBody()
             </main>
             <footer class="app-footer">
-                <span>&copy; 2026 Email Hub</span>
+                <span>&copy; 2026 Notification Hub</span>
                 <span aria-hidden="true">/</span>
                 <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
             </footer>
@@ -95,8 +95,8 @@ else
     <div class="public">
         <header class="topbar">
             <a class="brand" asp-area="" asp-controller="Home" asp-action="Index">
-                <span class="brand__mark" aria-hidden="true">EH</span>
-                <span>Email Hub</span>
+                <span class="brand__mark" aria-hidden="true">NH</span>
+                <span>Notification Hub</span>
             </a>
             <div class="topbar__actions">
                 <button class="switch" type="button" role="switch" aria-checked="true" data-theme-switch>
@@ -113,7 +113,7 @@ else
             @RenderBody()
         </main>
         <footer class="app-footer">
-            <span>&copy; 2026 Email Hub</span>
+            <span>&copy; 2026 Notification Hub</span>
             <span aria-hidden="true">/</span>
             <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </footer>
@@ -143,7 +143,7 @@ else
         switches.forEach(s => s.addEventListener("click", () => {
             const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
             root.setAttribute("data-theme", next);
-            try { localStorage.setItem("emailHubTheme", next); } catch (e) { }
+            try { localStorage.setItem("notificationHubTheme", next); } catch (e) { }
             sync();
         }));
         sync();

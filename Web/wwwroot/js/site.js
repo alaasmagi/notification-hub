@@ -1,5 +1,5 @@
 (() => {
-  const storageKey = "emailHubTheme";
+  const storageKey = "notificationHubTheme";
   const switchButton = document.getElementById("themeSwitch");
   const root = document.documentElement;
 

@@ -4,7 +4,7 @@ namespace Contracts.External.Models;
 
 /// <summary>
 /// All locale-dependent formatting lives here, per the contract's rule that localisation belongs to
-/// email-hub and publishers send machine-readable values. Templates call these helpers; they never
+/// notification-hub and publishers send machine-readable values. Templates call these helpers; they never
 /// format wire values themselves.
 ///
 /// Wire formats (contract §7): dates <c>2026-06-06</c>, months <c>2026-06</c>, times <c>11:00</c>,
