@@ -41,6 +41,10 @@ The test: every changed line should trace directly to the request.
 - No doc comments on every method/property, no comments that repeat what the code says, no commented-out code.
 - An inline comment only when the *why* isn't obvious from the code.
 
+**Modifiers - only what is needed:**
+- Don't add modifiers or keywords "just in case" to classes, interfaces, records, methods, properties or anything else - e.g. `sealed`, `partial`, `virtual`, `abstract`, `static`, `required`, `new`.
+- Use one only when the code actually needs it (it doesn't compile or behave correctly without it, or there is a concrete reason you can name). Match what the surrounding code already does.
+
 **Language:** everything written into the project is in English by default - code, identifiers, comments, UI text, error messages, docs, commit messages and PR texts - unless Section 5 says otherwise for this project.
 
 ## 4. Goal-Driven Execution
@@ -59,12 +63,10 @@ Run the relevant build/test/lint commands (Section 6) before saying a step is do
 
 ## 5. Project
 <!-- Fill in per project. Delete what doesn't apply. -->
-- **Name:** <project-name>
-- **Purpose:** <1-2 sentences>
+- **Name:** notification-hub
+- **Purpose:** Central notification service for other apps. Consumes notification commands from RabbitMQ, renders them from templates (RazorLight), delivers them through provider integrations (currently email via Brevo) and records delivery status per client service.
 - **Layout:**
-  - `/backend` - <short description>
-  - `/frontend` - <short description>
-  - `/mobile` - <short description>
+  - Repo root - C# .NET solution (`notification-hub.sln`) with `Domain`, `Contracts`, `Application`, `DTO`, `DataAccess`, `External`, `Web` (API + MVC) and `Tests` projects
 - **Specs:** if an `openspec/` folder exists, follow the active change proposal and do not implement anything outside it.
 
 ## 6. Stack & Commands
@@ -74,9 +76,9 @@ Run the relevant build/test/lint commands (Section 6) before saying a step is do
 - .NET 10, built on the `alaasmagi.Base.*` packages (Section 7). ASP.NET Core MVC + API in one host, EF Core with PostgreSQL, Keycloak, Redis, RabbitMQ, GlitchTip.
 - Records for DTOs/value objects, classes for domain entities.
 - Async all the way - never `.Result` / `.Wait()`.
-- Build: `dotnet build <solution>.sln`
+- Build: `dotnet build notification-hub.sln`
 - Run: `dotnet run --project Web/Web.csproj`
-- Test: `dotnet test <solution>.sln`
+- Test: `dotnet test notification-hub.sln`
 - Add a migration (allowed): `dotnet ef migrations add <Name> --project DataAccess/DataAccess.csproj --startup-project Web/Web.csproj --context AppDbContext`
 - Never run `dotnet ef database update` - I apply migrations (Section 9).
 - **Cleanup after building (macOS) - HARD rule:** builds on macOS can create files/folders whose name contains a literal backslash (e.g. one folder named `bin\Debug` instead of `bin/Debug`). Before finishing any task where you ran a build or tests, remove them:
@@ -85,26 +87,11 @@ Run the relevant build/test/lint commands (Section 6) before saying a step is do
   ```
   Mention in the change summary if anything was removed.
 
-### Frontend (<framework>)
-- <framework, language, state management>
-- Install: `<npm|pnpm> install`
-- Dev: `<cmd>`
-- Build: `<cmd>`
-- Lint / typecheck: `<cmd>`
-- Test: `<cmd>`
-- New logic (stores, services, utils, composables/hooks) gets unit tests in the same task. A task is not done until they exist and pass.
-
-### Mobile (<framework>)
-- <framework, language>
-- Run: `<cmd>`
-- Test: `<cmd>`
-- New logic (stores, services, utils, hooks) gets unit tests in the same task. A task is not done until they exist and pass.
-
 ### UI (Frontend, Mobile & backend MVC views) - HARD rules
 These rules apply to every UI, including Razor Pages views in the backend Web/MVC layer.
 - Use only my design system (based on Figma components): its components and tokens (colors, typography, spacing, radii, etc.). No other UI libraries, no hardcoded colors/sizes, no ad-hoc styles outside the tokens.
-- Exception: the accent color is project-specific. It is overridden in exactly one place (`<accent-token-location>`), for both light and dark mode. Everything else uses the accent token - never hardcode the accent value in components.
-- The design for a feature is made in Figma first and imported into `<design-folder>`. Before implementing any UI, find the matching design there and build exactly from it.
+- Exception: the accent color is project-specific. It is overridden in exactly one place, for both light and dark mode. Everything else uses the accent token - never hardcode the accent value in components.
+- The design for a feature is made in Figma first and imported into `/Users/alaasmagi/Projects/design-system`. Before implementing any UI, find the matching design there and build exactly from it.
 - If the design is missing, incomplete, or doesn't cover a state you need (empty, loading, error, mobile view, etc.) - stop and ask me. Never invent the design yourself.
 - If the design needs a component the design system doesn't have yet - stop and ask. Don't create a one-off replacement.
 
@@ -180,7 +167,7 @@ Write custom behavior only where the feature differs from generic CRUD or messag
 
 ## 8. Platform Integration
 <!-- Only if the project uses the shared hubs. -->
-- Auth goes through Keycloak (realm: `<app-slug>`). Never implement custom auth.
+- Auth goes through Keycloak (realm: `notification-hub`). Never implement custom auth.
 - Async communication goes through RabbitMQ using the `Base.Message` envelope. Do not define a new envelope or change exchange/queue topology in code - topology is set up manually.
 - **Errors:** no new exception hierarchies unless asked (see Section 7). Errors are reported to error-hub (GlitchTip), never only to the console. No `try/catch` unless the code can actually handle the error - never swallow exceptions.
 - Email is sent via email-hub commands (`<app-slug>.<action>`), never directly from the app.
