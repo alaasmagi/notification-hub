@@ -2,9 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Contracts.External.Models;
 
-/// <summary>
-/// Content payload for the <c>daily.lunch.recommendation</c> email event (<c>source: "food"</c>).
-/// </summary>
+/// <summary>Carries lunch recommendation email content.</summary>
 public class LunchRecommendationEmailContent
 {
     [JsonPropertyName("email")]

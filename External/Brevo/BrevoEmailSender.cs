@@ -62,8 +62,7 @@ public class BrevoEmailSender : IEmailSender
                     transient,
                     message.CorrelationId);
 
-                // Note: responseBody is kept out of the returned error/log — a Brevo error can echo
-                // request fields, and this result flows into exception paths and GlitchTip.
+                // Provider errors may echo sensitive request fields, so omit their bodies from errors and logs.
                 return EmailSendResult.Failure(
                     $"Brevo returned {statusCode}.",
                     transient);
@@ -81,7 +80,6 @@ public class BrevoEmailSender : IEmailSender
         }
         catch (HttpRequestException exception)
         {
-            // Network-level failure — transient, worth a requeue.
             _logger.LogError(
                 exception,
                 "Brevo email send failed because the HTTP request failed. CorrelationId: {CorrelationId}",
@@ -91,7 +89,6 @@ public class BrevoEmailSender : IEmailSender
         }
         catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            // Timeout — transient.
             _logger.LogError(
                 exception,
                 "Brevo email send timed out. CorrelationId: {CorrelationId}",

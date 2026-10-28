@@ -2,19 +2,14 @@ namespace Contracts.External.Models;
 
 public enum EmailDispatchOutcome
 {
-    /// <summary>Rendered and accepted by Brevo.</summary>
     Sent,
 
-    /// <summary>This envelope id was already sent — idempotent no-op, do not send again.</summary>
     AlreadySent,
 
-    /// <summary>Dropped before sending because the payload had already expired.</summary>
     Expired,
 
-    /// <summary>Transient send failure — safe and worthwhile to retry (requeue).</summary>
     TransientFailure,
 
-    /// <summary>Permanent failure (no template/branding, render failure, Brevo 4xx) — do not retry.</summary>
     PermanentFailure
 }
 

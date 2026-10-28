@@ -8,17 +8,8 @@ using RabbitMQ.Client.Events;
 
 namespace External.RabbitMQ;
 
-/// <summary>
-/// Queue-only consumer for the email command queue.
-///
-/// It does not use the shared <c>RabbitMqConsumerBase</c>: that base never surfaces
-/// <see cref="BasicDeliverEventArgs.RoutingKey"/> to the handler and always nacks
-/// <c>requeue: false</c>. This service needs both the routing key (for the source ↔ payload security
-/// check) and per-message control over requeue (transient failures must go back on the queue). It
-/// still reuses the shared <see cref="RabbitMqConnectionManager"/> and never declares, binds or
-/// touches an exchange — the topology (<c>email-hub.inbox</c> bound to <c>email-hub.commands</c>) is
-/// owned outside this application.
-/// </summary>
+/// <summary>Consumes email commands with routing-key validation and per-message retry control.</summary>
+// The typed consumer does not expose routing keys or per-message retry decisions.
 public class EmailEventConsumer : BackgroundService
 {
     private readonly RabbitMqConnectionManager _connectionManager;
@@ -43,13 +34,12 @@ public class EmailEventConsumer : BackgroundService
         var channel = await _connectionManager.CreateChannelAsync(cancellationToken: stoppingToken);
         try
         {
-            // Bounded in-flight deliveries. Manual ack (autoAck: false) below.
             await channel.BasicQosAsync(0, _queueOptions.PrefetchCount, global: false, stoppingToken);
 
             var consumer = new AsyncEventingBasicConsumer(channel);
             consumer.ReceivedAsync += (_, ea) => OnReceivedAsync(channel, ea, stoppingToken);
 
-            // No QueueDeclare / ExchangeDeclare / QueueBind — the queue already exists.
+            // The broker topology is managed outside this application.
             await channel.BasicConsumeAsync(
                 _queueOptions.QueueName,
                 autoAck: false,
@@ -99,10 +89,7 @@ public class EmailEventConsumer : BackgroundService
         }
         catch (Exception exception)
         {
-            // Unexpected failure (e.g. transient infra like the DB being unreachable). Requeue and let
-            // the queue's x-delivery-limit dead-letter it after a few attempts — no app-side loop. The
-            // idempotency guard makes a redelivery after a successful-but-unacked send a safe no-op.
-            // Only the routing key is logged; never the body.
+            // Let the queue delivery limit bound retries; never log message bodies.
             _logger.LogError(
                 exception,
                 "Unexpected error processing delivery; requeueing. RoutingKey: {RoutingKey}", ea.RoutingKey);

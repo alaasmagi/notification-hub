@@ -170,7 +170,7 @@ Write custom behavior only where the feature differs from generic CRUD or messag
 - Auth goes through Keycloak (realm: `notification-hub`). Never implement custom auth.
 - Async communication goes through RabbitMQ using the `Base.Message` envelope. Do not define a new envelope or change exchange/queue topology in code - topology is set up manually.
 - **Errors:** no new exception hierarchies unless asked (see Section 7). Errors are reported to error-hub (GlitchTip), never only to the console. No `try/catch` unless the code can actually handle the error - never swallow exceptions.
-- Email is sent via email-hub commands (`<app-slug>.<action>`), never directly from the app.
+- This service was renamed from email-hub to notification-hub. It delivers notifications through provider integrations in External, currently email via Brevo. Other channels may be added later; preserve existing command contracts and broker topology unless explicitly requested.
 - Config comes from environment variables (`APP_SLUG` etc.) - see Section 10. Never hardcode secrets; never commit `.env`.
 
 ## 9. Version Control - HARD Rules

@@ -51,7 +51,6 @@ public class EmailRepository : BaseRepository<Email, EmailEntity, EmailEntityMap
 
     public async Task<Email?> TryCreatePendingAsync(Email email, CancellationToken cancellationToken = default)
     {
-        // CreateAsync applies the metadata (CreatedAt/By, identifier) and adds to the context.
         var response = await CreateAsync(email);
         if (!response.Successful || response.Value is null)
         {
@@ -65,8 +64,7 @@ public class EmailRepository : BaseRepository<Email, EmailEntity, EmailEntityMap
         }
         catch (DbUpdateException)
         {
-            // Unique MessageId violation → another delivery of the same envelope id already inserted.
-            // Clear the tracked (failed) insert so this context can be safely reused/disposed.
+            // Clear the failed insert before this context is reused.
             _repositoryDbContext.ChangeTracker.Clear();
             return null;
         }

@@ -7,11 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Application;
 
-/// <summary>
-/// Renders and sends one templated email, idempotently. Resolves the three independent inputs the
-/// contract insists on not collapsing: the template by <c>{source}.{action}</c>, the branding by
-/// <c>tenant</c>, and the language by <c>locale</c>.
-/// </summary>
+/// <summary>Resolves, renders and delivers templated emails with message-id deduplication.</summary>
 public class EmailDispatchService : IEmailDispatchService
 {
     private readonly IClientRepository _clientRepository;
@@ -48,7 +44,6 @@ public class EmailDispatchService : IEmailDispatchService
     {
         var languageCode = NormalizeLanguageCode(request.LanguageCode);
 
-        // --- Resolve the three axes. A miss on any is permanent: retrying can't conjure a template. ---
         var clientServiceName = request.ClientServiceName;
         var client = await _clientRepository.GetActiveByServiceNameAsync(clientServiceName);
         if (client is null)
@@ -73,7 +68,7 @@ public class EmailDispatchService : IEmailDispatchService
                 $"No active template for client '{clientServiceName}', action '{request.EmailType}', language '{languageCode}'.");
         }
 
-        // --- Idempotency: insert-before-send. A row already sent for this id is never sent twice. ---
+        // Commit the pending row before sending to guard against concurrent duplicates.
         var existing = await _emailRepository.GetByMessageIdAsync(request.MessageId, cancellationToken);
         Guid emailId;
         if (existing is not null)
@@ -116,7 +111,6 @@ public class EmailDispatchService : IEmailDispatchService
             emailId = created.Id;
         }
 
-        // --- Render. A render failure is permanent (a bad template/model won't fix itself). ---
         RenderedEmailTemplate rendered;
         try
         {
@@ -139,8 +133,7 @@ public class EmailDispatchService : IEmailDispatchService
         }
         catch (Exception exception)
         {
-            // Log the type only, never exception.Message — a render error can echo model values
-            // (otpCode, actionLink) and this path feeds GlitchTip.
+            // Log only the exception type because render errors can expose OTPs or action links.
             _logger.LogError(
                 "Template render failed ({ExceptionType}). MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
                 exception.GetType().Name, request.MessageId, request.Source, request.Tenant, request.EmailType);
@@ -150,7 +143,6 @@ public class EmailDispatchService : IEmailDispatchService
             return EmailDispatchResult.From(EmailDispatchOutcome.PermanentFailure, emailId, "Template render failed.");
         }
 
-        // --- Send. ---
         var sendResult = await _emailSender.SendAsync(
             new OutboundEmailMessage
             {

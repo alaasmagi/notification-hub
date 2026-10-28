@@ -92,8 +92,7 @@ public class AppDbContext : DbContext
 
     private static void ConfigureEmails(ModelBuilder modelBuilder)
     {
-        // The idempotency guard: the envelope id is unique, so a duplicate delivery cannot create a
-        // second row (and a second email). Inserting this row before sending is the dedup itself.
+        // A unique envelope id guards against concurrent duplicate sends.
         modelBuilder.Entity<EmailEntity>()
             .HasIndex(x => x.MessageId)
             .IsUnique();

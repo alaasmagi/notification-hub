@@ -47,6 +47,8 @@ jobs:
           DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
           RABBITMQ_URI: ${{ secrets.RABBITMQ_URI }}
           RABBITMQ_QUEUE: ${{ secrets.RABBITMQ_QUEUE }}
+          RABBITMQ_PREFETCH: ${{ secrets.RABBITMQ_PREFETCH }}
+          RABBITMQ_ACCEPT_INVALID_CERT: ${{ secrets.RABBITMQ_ACCEPT_INVALID_CERT }}
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           BREVO_BASE_URL: ${{ secrets.BREVO_BASE_URL }}
           GLITCHTIP_DSN: ${{ secrets.GLITCHTIP_DSN }}
@@ -78,6 +80,8 @@ jobs:
 
             printf 'RABBITMQ_URI=%s\n' "${RABBITMQ_URI}"
             printf 'RABBITMQ_QUEUE=%s\n' "${RABBITMQ_QUEUE}"
+            printf 'RABBITMQ_PREFETCH=%s\n' "${RABBITMQ_PREFETCH}"
+            printf 'RABBITMQ_ACCEPT_INVALID_CERT=%s\n' "${RABBITMQ_ACCEPT_INVALID_CERT}"
 
             printf 'BREVO_API_KEY=%s\n' "${BREVO_API_KEY}"
             printf 'BREVO_BASE_URL=%s\n' "${BREVO_BASE_URL}"

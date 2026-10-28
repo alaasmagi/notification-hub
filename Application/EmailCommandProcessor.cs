@@ -9,14 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Application;
 
-/// <summary>
-/// The consumer rules from the contract, in order: validate (routing key ↔ payload, tenant,
-/// contentVersion, known action) → idempotency + send (delegated to the dispatch service) → drop
-/// expired. Every rejection is permanent; nothing here benefits from a retry.
-///
-/// Secret hygiene: message bodies are never logged and never appear in exception messages or
-/// GlitchTip. The action, source, tenant and envelope id are enough to identify a message.
-/// </summary>
+/// <summary>Validates email commands and determines their delivery disposition.</summary>
 public class EmailCommandProcessor : IEmailCommandProcessor
 {
     // A consumer written for major "1" must accept "1.0", "1.1", … and ignore unknown fields.
@@ -43,8 +36,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         ReadOnlyMemory<byte> body,
         CancellationToken cancellationToken = default)
     {
-        // Deserialize into the shared envelope (its members are `required`, so a malformed or
-        // incomplete envelope throws here and is rejected — never requeued).
+        // Malformed envelopes cannot succeed on retry.
         BaseEventEnvelope<JsonElement>? envelope;
         try
         {
@@ -74,9 +66,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         var keySource = segments[0];
         var keyAction = segments[2];
 
-        // Security check: the broker enforces topic permissions on the key, never the body. If the key
-        // says one source and the body another, picking the template from the body would let an app
-        // send mail as another app. Trust the key; reject the mismatch.
+        // The broker authenticates the routing key, not the payload source.
         if (!string.Equals(keySource, envelope.Source, StringComparison.Ordinal))
         {
             _logger.LogWarning(
@@ -99,8 +89,6 @@ public class EmailCommandProcessor : IEmailCommandProcessor
             return MessageDisposition.RejectNoRequeue;
         }
 
-        // Map the (broker-authenticated) action to its strongly-typed content model. An action we have
-        // no model for has no template either → reject, no requeue.
         var content = DeserializeContent(keyAction, envelope.Content);
         if (content is null)
         {
@@ -120,8 +108,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
 
         TryGetString(envelope.Content, "locale", out var locale);
 
-        // Expiry: a message can expire between delivery and send. If the payload already expired, drop
-        // it (ack) rather than send — a code that no longer works is worse than no code.
+        // Acknowledge expired commands so invalid codes are never sent.
         if (HasExpired(envelope.Content))
         {
             _logger.LogInformation(
@@ -154,7 +141,6 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         };
     }
 
-    // Compare the major part only. "1.0" and "1.1" are both supported by a major-"1" consumer.
     private static bool IsContentVersionSupported(string? contentVersion)
     {
         if (string.IsNullOrWhiteSpace(contentVersion))

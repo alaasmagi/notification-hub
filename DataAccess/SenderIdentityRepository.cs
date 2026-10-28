@@ -42,8 +42,7 @@ public class SenderIdentityRepository : BaseRepository<SenderIdentity, SenderIde
 
     public async Task<SenderIdentity?> GetActiveAsync(Guid clientId, string emailType, string tenant)
     {
-        // Prefer the tenant-specific branding row; fall back to the tenant-agnostic default ("").
-        // Ordering by Tenant descending puts a non-empty tenant match ahead of the "" default.
+        // Prefer tenant-specific branding over the tenant-agnostic fallback.
         var entity = await _repositoryDbContext.SenderIdentities
             .AsNoTracking()
             .Where(x =>

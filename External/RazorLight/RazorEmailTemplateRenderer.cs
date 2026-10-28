@@ -24,11 +24,7 @@ public class RazorEmailTemplateRenderer : IEmailTemplateRenderer
         EmailTemplateModel model,
         CancellationToken cancellationToken = default)
     {
-        // A template declares `@model <ContentType>` (e.g. InvoiceEmailContent) and reads the content's
-        // members straight off Model. So the RazorLight model is the concrete content object itself,
-        // not the EmailTemplateModel wrapper. The other two axes the wrapper carries — Fmt (locale
-        // formatting) and Branding (tenant identity) — are still reachable, via the ViewBag:
-        // `@ViewBag.Fmt.Amount(...)`, `@ViewBag.Branding.DisplayName`.
+        // Templates bind to the concrete content type; branding and locale helpers remain in ViewBag.
         var content = (object)model.Content;
 
         dynamic viewBag = new ExpandoObject();

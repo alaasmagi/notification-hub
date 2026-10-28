@@ -2,9 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Contracts.External.Models;
 
-/// <summary>
-/// Content payload for the <c>monthly.invoice</c> email event (<c>source: "invoice"</c>).
-/// </summary>
+/// <summary>Carries invoice email content.</summary>
 public class InvoiceEmailContent
 {
     [JsonPropertyName("email")]
