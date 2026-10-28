@@ -464,11 +464,9 @@ textarea.input { min-height: 0; resize: vertical; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); }
 .topbar__actions { display: flex; align-items: center; gap: var(--space-3); }
 .public .content { width: 100%; max-width: 1200px; margin-inline: auto; }
-.sign-in { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 560px; margin: auto; padding-block: var(--space-16); text-align: center; }
-.sign-in h1 { font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.02em; }
-@@media (min-width: 1024px) { .sign-in h1 { font-size: 48px; line-height: 56px; } }
-.sign-in p { color: var(--color-text-secondary); }
-.sign-in .btn { min-width: 200px; }
+.sign-in { display: flex; flex-direction: column; gap: var(--space-6); width: 100%; max-width: 560px; margin: auto; padding: var(--space-8); }
+.sign-in .brand { padding: 0; }
+.sign-in .btn { width: 100%; }
 
 /* Prose lists */
 .prose ul { display: flex; flex-direction: column; gap: var(--space-2); padding-left: var(--space-5); color: var(--color-text-secondary); }

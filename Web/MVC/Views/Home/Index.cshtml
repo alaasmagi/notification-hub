@@ -35,11 +35,20 @@
 }
 else
 {
-    <section class="sign-in">
-        <p class="kicker">Transactional email operations</p>
-        <h1>Notification Hub</h1>
-        <p>Sign in with your platform account to manage clients, senders, templates and deliveries.</p>
-        <a class="btn btn--primary" asp-controller="Account" asp-action="Login">Login</a>
-        <p class="footnote">Access is limited to authenticated operators.</p>
+    <section class="card sign-in" aria-labelledby="sign-in-title">
+        <div class="brand">
+            <span class="brand__mark" aria-hidden="true">NH</span>
+            <span>Notification Hub</span>
+        </div>
+        <div class="page-header">
+            <div class="page-header__title">
+                <h1 id="sign-in-title">Sign in</h1>
+                <p class="page-header__lede">Sign in with your account to continue.</p>
+            </div>
+        </div>
+        <a class="btn btn--primary" asp-controller="Account" asp-action="Login">
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+            Log in
+        </a>
     </section>
 }
