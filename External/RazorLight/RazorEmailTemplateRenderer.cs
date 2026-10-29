@@ -33,14 +33,14 @@ public class RazorEmailTemplateRenderer : IEmailTemplateRenderer
         viewBag.Locale = model.Locale;
 
         var subject = await _engine.CompileRenderStringAsync(
-            BuildTemplateKey(template, "subject", template.SubjectTemplate),
-            template.SubjectTemplate,
+            BuildTemplateKey(template, "subject", template.Title),
+            template.Title,
             content,
             (ExpandoObject)viewBag);
 
         var htmlBody = await _engine.CompileRenderStringAsync(
-            BuildTemplateKey(template, "body", template.HtmlBodyTemplate),
-            template.HtmlBodyTemplate,
+            BuildTemplateKey(template, "body", template.Body),
+            template.Body,
             content,
             (ExpandoObject)viewBag);
 

@@ -2,7 +2,6 @@ using System.Text.Json;
 using Application;
 using Base.Contracts.DataAccess;
 using Base.Contracts.Message;
-using Base.DataAccess.EF;
 using Base.Message.RabbitMQ;
 using Contracts.Application;
 using Contracts.DataAccess;
@@ -47,19 +46,23 @@ public static class ServiceConfiguration
     {
         services.AddDbContext<AppDbContext>(options =>
         {
-            options.UseNpgsql(Env.GetRequired("DATABASE_CONNECTION_STRING"));
+            options.UseNpgsql(Env.GetRequired("DATABASE_CONNECTION_STRING"),
+                postgres => postgres.MigrationsHistoryTable("__EFMigrationsHistory", "notification"));
         });
 
         services.AddScoped<ClientEntityMapper>();
-        services.AddScoped<SenderIdentityEntityMapper>();
+        services.AddScoped<NotificationTypeEntityMapper>();
+        services.AddScoped<EmailSenderEntityMapper>();
         services.AddScoped<TemplateEntityMapper>();
-        services.AddScoped<EmailEntityMapper>();
+        services.AddScoped<DeliveryEntityMapper>();
 
         services.AddScoped<IClientRepository, ClientRepository>();
-        services.AddScoped<ISenderIdentityRepository, SenderIdentityRepository>();
+        services.AddScoped<INotificationTypeRepository, NotificationTypeRepository>();
+        services.AddScoped<IEmailSenderRepository, EmailSenderRepository>();
         services.AddScoped<ITemplateRepository, TemplateRepository>();
-        services.AddScoped<IEmailRepository, EmailRepository>();
-        services.AddScoped<IBaseUow, BaseUow<AppDbContext>>();
+        services.AddScoped<IDeliveryRepository, DeliveryRepository>();
+        services.AddScoped<IAppUow, AppUow>();
+        services.AddScoped<IBaseUow>(provider => provider.GetRequiredService<IAppUow>());
 
         services.AddScoped<IEmailDispatchService, EmailDispatchService>();
         services.AddSingleton<IEmailTemplateRenderer, RazorEmailTemplateRenderer>();

@@ -1,29 +1,29 @@
-@model Template
+@model TemplateDto
 @{
-    var senderIdentities = (IReadOnlyList<SenderIdentityOption>)(ViewBag.SenderIdentities ?? new List<SenderIdentityOption>());
-    var selectedSenderIdentity = senderIdentities.FirstOrDefault(x => x.Id == Model.SenderIdentityId) ?? senderIdentities.FirstOrDefault();
+    var notificationTypes = (IReadOnlyList<NotificationTypeOption>)(ViewBag.NotificationTypes ?? new List<NotificationTypeOption>());
+    var selectedNotificationType = notificationTypes.FirstOrDefault(x => x.Id == Model.NotificationTypeId) ?? notificationTypes.FirstOrDefault();
 }
 
 <div class="form-row form-row--template">
     <div class="field">
-        <label class="field__label" asp-for="SenderIdentityId"></label>
+        <label class="field__label" asp-for="NotificationTypeId"></label>
         <div class="field__control">
-            <select class="input" id="SenderIdentityId" name="SenderIdentityId">
-                @foreach (var senderIdentity in senderIdentities)
+            <select class="input" id="NotificationTypeId" name="NotificationTypeId">
+                @foreach (var notificationType in notificationTypes)
                 {
-                    <option value="@senderIdentity.Id" data-service-name="@senderIdentity.ClientServiceName" selected="@(senderIdentity.Id == selectedSenderIdentity?.Id)">
-                        @senderIdentity.ClientServiceName — @senderIdentity.EmailType — @senderIdentity.FromAddress
+                    <option value="@notificationType.Id" data-service-name="@notificationType.ClientSource" selected="@(notificationType.Id == selectedNotificationType?.Id)">
+                        @notificationType.ClientSource — @notificationType.Key
                     </option>
                 }
             </select>
             <svg class="icon icon--end" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </div>
-        <span asp-validation-for="SenderIdentityId"></span>
+        <span asp-validation-for="NotificationTypeId"></span>
     </div>
 
     <div class="field">
-        <label class="field__label" for="ClientServiceName">Client service name</label>
-        <input class="input mono" id="ClientServiceName" value="@selectedSenderIdentity?.ClientServiceName" readonly/>
+        <label class="field__label" for="ClientSource">Client source</label>
+        <input class="input mono" id="ClientSource" value="@selectedNotificationType?.ClientSource" readonly/>
     </div>
 
     <div class="field">
@@ -33,16 +33,32 @@
     </div>
 </div>
 
-<div class="field">
-    <label class="field__label" asp-for="SubjectTemplate"></label>
-    <textarea class="input mono" asp-for="SubjectTemplate" rows="3"></textarea>
-    <span asp-validation-for="SubjectTemplate"></span>
+<div class="form-row">
+    <div class="field">
+        <label class="field__label" asp-for="Channel"></label>
+        <div class="field__control">
+            <select class="input" asp-for="Channel" asp-items="Html.GetEnumSelectList<EChannel>()"></select>
+            <svg class="icon icon--end" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </div>
+        <span asp-validation-for="Channel"></span>
+    </div>
+    <div class="field">
+        <label class="field__label" asp-for="Tenant"></label>
+        <input class="input mono" asp-for="Tenant" placeholder="Empty for shared fallback"/>
+        <span asp-validation-for="Tenant"></span>
+    </div>
 </div>
 
 <div class="field">
-    <label class="field__label" asp-for="HtmlBodyTemplate"></label>
-    <textarea class="input mono" asp-for="HtmlBodyTemplate" rows="18" spellcheck="false"></textarea>
-    <span asp-validation-for="HtmlBodyTemplate"></span>
+    <label class="field__label" asp-for="Title"></label>
+    <textarea class="input mono" asp-for="Title" rows="3"></textarea>
+    <span asp-validation-for="Title"></span>
+</div>
+
+<div class="field">
+    <label class="field__label" asp-for="Body"></label>
+    <textarea class="input mono" asp-for="Body" rows="18" spellcheck="false"></textarea>
+    <span asp-validation-for="Body"></span>
 </div>
 
 <label class="check">
@@ -52,17 +68,17 @@
 
 <script>
     (() => {
-        const senderIdentitySelect = document.getElementById("SenderIdentityId");
-        const serviceNameInput = document.getElementById("ClientServiceName");
-        if (!senderIdentitySelect || !serviceNameInput) {
+        const notificationTypeSelect = document.getElementById("NotificationTypeId");
+        const sourceInput = document.getElementById("ClientSource");
+        if (!notificationTypeSelect || !sourceInput) {
             return;
         }
 
-        const syncServiceName = () => {
-            serviceNameInput.value = senderIdentitySelect.selectedOptions[0]?.dataset.serviceName || "";
+        const syncSource = () => {
+            sourceInput.value = notificationTypeSelect.selectedOptions[0]?.dataset.source || "";
         };
 
-        senderIdentitySelect.addEventListener("change", syncServiceName);
-        syncServiceName();
+        notificationTypeSelect.addEventListener("change", syncSource);
+        syncSource();
     })();
 </script>

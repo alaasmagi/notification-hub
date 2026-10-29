@@ -1,0 +1,25 @@
+@model EmailSenderDto
+
+@{
+    ViewData["Title"] = "Create email sender";
+}
+
+<header class="page-header">
+    <div class="page-header__title">
+        <p class="kicker">From address routing</p>
+        <h1>Create email sender</h1>
+    </div>
+</header>
+
+<form asp-action="Create" method="post" class="card form narrow">
+    <div asp-validation-summary="ModelOnly"></div>
+    <partial name="_Form" model="Model"/>
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Create sender</button>
+        <a class="btn btn--ghost" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+}

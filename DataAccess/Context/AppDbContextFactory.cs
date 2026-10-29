@@ -16,7 +16,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
         }
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, options => options.MigrationsHistoryTable("__EFMigrationsHistory", "notification"))
             .Options;
 
         return new AppDbContext(options);

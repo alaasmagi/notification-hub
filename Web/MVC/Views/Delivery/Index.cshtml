@@ -1,0 +1,52 @@
+@model IEnumerable<DeliveryDto>
+
+@{
+    ViewData["Title"] = "Deliveries";
+}
+
+<header class="page-header">
+    <div class="page-header__title">
+        <p class="kicker">Delivery log</p>
+        <h1>Deliveries</h1>
+    </div>
+</header>
+
+<div class="card table-card">
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Source</th>
+            <th>Type</th>
+            <th>Channel</th>
+            <th>Tenant</th>
+            <th>To</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Sent at</th>
+            <th class="actions-col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var email in Model)
+        {
+            <tr>
+                <td><code class="code-chip">@email.Source</code></td>
+                <td class="mono">@email.NotificationType</td>
+                <td>@email.Channel</td>
+                <td>@email.Tenant</td>
+                <td>@email.Recipient</td>
+                <td>@email.Title</td>
+                <td><partial name="_DeliveryStatus" model="email.Status"/></td>
+                <td class="nowrap mono secondary">@email.SentAt?.ToString("u")</td>
+                <td class="actions-col">
+                    <a class="btn btn--ghost btn--sm" asp-action="Details" asp-route-id="@email.Id">Details</a>
+                </td>
+            </tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="9" class="empty">No deliveries have been sent yet.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

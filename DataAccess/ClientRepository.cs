@@ -10,43 +10,31 @@ namespace DataAccess;
 
 public class ClientRepository : BaseRepository<Client, ClientEntity, ClientEntityMapper>, IClientRepository
 {
-    private readonly AppDbContext _repositoryDbContext;
-    private readonly ClientEntityMapper _repositoryMapper;
+    private readonly AppDbContext _context;
+    private readonly ClientEntityMapper _mapper;
 
-    public ClientRepository(AppDbContext repositoryDbContext, ClientEntityMapper repositoryMapper)
-        : base(repositoryDbContext, repositoryMapper)
+    public ClientRepository(AppDbContext context, ClientEntityMapper mapper) : base(context, mapper)
     {
-        _repositoryDbContext = repositoryDbContext;
-        _repositoryMapper = repositoryMapper;
+        _context = context;
+        _mapper = mapper;
     }
 
     public async Task<IReadOnlyList<Client>> GetAllForAdminAsync()
     {
-        var entities = await _repositoryDbContext.Clients
-            .AsNoTracking()
-            .OrderBy(x => x.ServiceName)
-            .ToListAsync();
-
-        return _repositoryMapper.Map(entities)?.ToList() ?? [];
+        var entities = await _context.Clients.AsNoTracking()
+            .OrderBy(x => x.Source).ToListAsync();
+        return _mapper.Map(entities)?.ToList() ?? [];
     }
 
     public async Task<Client?> GetForAdminAsync(Guid id)
     {
-        var entity = await _repositoryDbContext.Clients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        return _repositoryMapper.Map(entity);
+        return _mapper.Map(await _context.Clients.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id));
     }
 
-    public async Task<Client?> GetActiveByServiceNameAsync(string serviceName)
+    public async Task<Client?> GetActiveBySourceAsync(string source)
     {
-        var entity = await _repositoryDbContext.Clients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x =>
-                x.ServiceName == serviceName &&
-                x.IsActive);
-
-        return _repositoryMapper.Map(entity);
+        var entity = await _context.Clients.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Source == source && x.IsActive);
+        return _mapper.Map(entity);
     }
 }

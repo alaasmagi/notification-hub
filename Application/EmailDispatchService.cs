@@ -11,9 +11,11 @@ namespace Application;
 public class EmailDispatchService : IEmailDispatchService
 {
     private readonly IClientRepository _clientRepository;
-    private readonly ISenderIdentityRepository _senderIdentityRepository;
+    private readonly INotificationTypeRepository _notificationTypeRepository;
+    private readonly IAppUow _uow;
+    private readonly IEmailSenderRepository _emailSenderRepository;
     private readonly ITemplateRepository _templateRepository;
-    private readonly IEmailRepository _emailRepository;
+    private readonly IDeliveryRepository _deliveryRepository;
     private readonly IEmailTemplateRenderer _templateRenderer;
     private readonly IEmailSender _emailSender;
     private readonly ILogger<EmailDispatchService> _logger;
@@ -22,17 +24,21 @@ public class EmailDispatchService : IEmailDispatchService
 
     public EmailDispatchService(
         IClientRepository clientRepository,
-        ISenderIdentityRepository senderIdentityRepository,
+        INotificationTypeRepository notificationTypeRepository,
+        IAppUow uow,
+        IEmailSenderRepository emailSenderRepository,
         ITemplateRepository templateRepository,
-        IEmailRepository emailRepository,
+        IDeliveryRepository deliveryRepository,
         IEmailTemplateRenderer templateRenderer,
         IEmailSender emailSender,
         ILogger<EmailDispatchService> logger)
     {
         _clientRepository = clientRepository;
-        _senderIdentityRepository = senderIdentityRepository;
+        _notificationTypeRepository = notificationTypeRepository;
+        _uow = uow;
+        _emailSenderRepository = emailSenderRepository;
         _templateRepository = templateRepository;
-        _emailRepository = emailRepository;
+        _deliveryRepository = deliveryRepository;
         _templateRenderer = templateRenderer;
         _emailSender = emailSender;
         _logger = logger;
@@ -44,72 +50,67 @@ public class EmailDispatchService : IEmailDispatchService
     {
         var languageCode = NormalizeLanguageCode(request.LanguageCode);
 
-        var clientServiceName = request.ClientServiceName;
-        var client = await _clientRepository.GetActiveByServiceNameAsync(clientServiceName);
+        var clientSource = request.Source;
+        var client = await _clientRepository.GetActiveBySourceAsync(clientSource);
         if (client is null)
         {
-            return Permanent(request, $"No active client for '{clientServiceName}'.");
+            return Permanent(request, $"No active client for '{clientSource}'.");
         }
 
-        var branding = await _senderIdentityRepository.GetActiveAsync(
-            client.Id, request.EmailType, request.Tenant);
+        var notificationType = await _notificationTypeRepository.GetActiveAsync(client.Id, request.NotificationType);
+        if (notificationType is null)
+        {
+            return Permanent(request, $"No active notification type '{request.NotificationType}' for '{request.Source}'.");
+        }
+
+        var branding = await _emailSenderRepository.GetActiveAsync(client.Id, request.Tenant);
         if (branding is null)
         {
-            return Permanent(request,
-                $"No active sender identity for client '{clientServiceName}', action '{request.EmailType}', tenant '{request.Tenant}' (or '' fallback).");
+            return Permanent(request, $"No active email sender for '{request.Source}', tenant '{request.Tenant}' (or '' fallback).");
         }
 
         var template =
-            await _templateRepository.GetActiveAsync(branding.Id, languageCode)
-            ?? await _templateRepository.GetActiveAsync(branding.Id, DefaultLanguageCode);
+            await _templateRepository.GetActiveAsync(notificationType.Id, EChannel.Email, request.Tenant, languageCode)
+            ?? (request.Tenant == "" ? null : await _templateRepository.GetActiveAsync(notificationType.Id, EChannel.Email, "", languageCode));
+        if (template is null && languageCode != DefaultLanguageCode)
+        {
+            template = await _templateRepository.GetActiveAsync(notificationType.Id, EChannel.Email, request.Tenant, DefaultLanguageCode)
+                ?? (request.Tenant == "" ? null : await _templateRepository.GetActiveAsync(notificationType.Id, EChannel.Email, "", DefaultLanguageCode));
+        }
         if (template is null)
         {
-            return Permanent(request,
-                $"No active template for client '{clientServiceName}', action '{request.EmailType}', language '{languageCode}'.");
+            return Permanent(request, $"No active template for '{request.Source}', type '{request.NotificationType}', language '{languageCode}'.");
         }
 
-        // Commit the pending row before sending to guard against concurrent duplicates.
-        var existing = await _emailRepository.GetByMessageIdAsync(request.MessageId, cancellationToken);
-        Guid emailId;
-        if (existing is not null)
+        var delivery = await _deliveryRepository.GetByMessageIdAsync(request.MessageId, EChannel.Email, cancellationToken);
+        if (delivery?.Status == EDeliveryStatus.Sent)
         {
-            if (existing.Status == EEmailStatus.Sent)
+            return EmailDispatchResult.From(EmailDispatchOutcome.AlreadySent, delivery.Id);
+        }
+        if (delivery is null)
+        {
+            var created = await _deliveryRepository.CreateAsync(new Delivery
             {
-                _logger.LogInformation(
-                    "Duplicate delivery ignored; already sent. MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-                    request.MessageId, request.Source, request.Tenant, request.EmailType);
-                return EmailDispatchResult.From(EmailDispatchOutcome.AlreadySent, existing.Id);
+                MessageId = request.MessageId,
+                Source = request.Source,
+                Tenant = request.Tenant,
+                NotificationType = request.NotificationType,
+                Channel = EChannel.Email,
+                Recipient = request.ToEmail,
+                Status = EDeliveryStatus.Pending
+            });
+            if (!created.Successful || created.Value is null)
+            {
+                return Permanent(request, created.Error?.Message ?? "Could not stage delivery.");
             }
-
-            // A prior attempt failed transiently and was requeued — this is the retry, not a duplicate.
-            emailId = existing.Id;
-        }
-        else
-        {
-            var created = await _emailRepository.TryCreatePendingAsync(
-                new Email
-                {
-                    MessageId = request.MessageId,
-                    ServiceName = request.Source,
-                    Tenant = request.Tenant,
-                    EmailType = request.EmailType,
-                    ToRecipients = request.ToEmail,
-                    ReplyTo = branding.ReplyTo,
-                    Status = EEmailStatus.Pending
-                },
-                cancellationToken);
-
-            if (created is null)
+            // Commit before sending so the unique index arbitrates concurrent inserts.
+            if (!await _uow.TrySaveDeliveryAsync(cancellationToken))
             {
-                // Lost the insert race to a concurrent duplicate delivery — it owns the send.
-                _logger.LogInformation(
-                    "Duplicate delivery ignored on insert race. MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-                    request.MessageId, request.Source, request.Tenant, request.EmailType);
                 return EmailDispatchResult.From(EmailDispatchOutcome.AlreadySent);
             }
-
-            emailId = created.Id;
+            delivery = created.Value;
         }
+        var deliveryId = delivery.Id;
 
         RenderedEmailTemplate rendered;
         try
@@ -136,11 +137,9 @@ public class EmailDispatchService : IEmailDispatchService
             // Log only the exception type because render errors can expose OTPs or action links.
             _logger.LogError(
                 "Template render failed ({ExceptionType}). MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-                exception.GetType().Name, request.MessageId, request.Source, request.Tenant, request.EmailType);
+                exception.GetType().Name, request.MessageId, request.Source, request.Tenant, request.NotificationType);
 
-            await _emailRepository.UpdateDeliveryStatusAsync(
-                emailId, EEmailStatus.Failed, null, null, cancellationToken);
-            return EmailDispatchResult.From(EmailDispatchOutcome.PermanentFailure, emailId, "Template render failed.");
+            return await SaveStatusAsync(delivery, EDeliveryStatus.Failed, null, "Template render failed.", null, EmailDispatchOutcome.PermanentFailure);
         }
 
         var sendResult = await _emailSender.SendAsync(
@@ -158,34 +157,51 @@ public class EmailDispatchService : IEmailDispatchService
 
         if (sendResult.Successful)
         {
-            await _emailRepository.UpdateDeliveryStatusAsync(
-                emailId, EEmailStatus.Sent, rendered.Subject, DateTime.UtcNow, cancellationToken);
+            var result = await SaveStatusAsync(delivery, EDeliveryStatus.Sent, rendered.Subject, null, DateTime.UtcNow, EmailDispatchOutcome.Sent);
+            if (result.Outcome != EmailDispatchOutcome.Sent)
+            {
+                return result;
+            }
 
             _logger.LogInformation(
-                "Email sent. EmailId: {EmailId}, MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-                emailId, request.MessageId, request.Source, request.Tenant, request.EmailType);
-            return EmailDispatchResult.From(EmailDispatchOutcome.Sent, emailId);
+                "Delivery sent. DeliveryId: {DeliveryId}, MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
+                deliveryId, request.MessageId, request.Source, request.Tenant, request.NotificationType);
+            return result;
         }
-
-        await _emailRepository.UpdateDeliveryStatusAsync(
-            emailId, EEmailStatus.Failed, rendered.Subject, null, cancellationToken);
 
         var outcome = sendResult.Transient
             ? EmailDispatchOutcome.TransientFailure
             : EmailDispatchOutcome.PermanentFailure;
 
         _logger.LogError(
-            "Email send failed ({Outcome}). EmailId: {EmailId}, MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-            outcome, emailId, request.MessageId, request.Source, request.Tenant, request.EmailType);
+            "Delivery send failed ({Outcome}). DeliveryId: {DeliveryId}, MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
+            outcome, deliveryId, request.MessageId, request.Source, request.Tenant, request.NotificationType);
 
-        return EmailDispatchResult.From(outcome, emailId, sendResult.ErrorMessage);
+        return await SaveStatusAsync(delivery, EDeliveryStatus.Failed, rendered.Subject,
+            sendResult.ErrorMessage ?? "Email send failed.", null, outcome);
+    }
+
+    private async Task<EmailDispatchResult> SaveStatusAsync(Delivery delivery, EDeliveryStatus status, string? title, string? error, DateTime? sentAt, EmailDispatchOutcome outcome)
+    {
+        delivery.Status = status;
+        delivery.Title = title;
+        delivery.Error = error;
+        delivery.SentAt = sentAt;
+        var response = await _deliveryRepository.UpdateAsync(delivery.Id, delivery, null, Guid.Empty);
+        if (!response.Successful)
+        {
+            _logger.LogError("Could not update delivery status. DeliveryId: {DeliveryId}", delivery.Id);
+            return EmailDispatchResult.From(EmailDispatchOutcome.PermanentFailure, delivery.Id, response.Error?.Message);
+        }
+        await _uow.SaveChangesAsync();
+        return EmailDispatchResult.From(outcome, delivery.Id, error);
     }
 
     private EmailDispatchResult Permanent(SendTemplatedEmailRequest request, string reason)
     {
         _logger.LogError(
-            "Email dispatch rejected: {Reason} MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-            reason, request.MessageId, request.Source, request.Tenant, request.EmailType);
+            "Delivery dispatch rejected: {Reason} MessageId: {MessageId}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
+            reason, request.MessageId, request.Source, request.Tenant, request.NotificationType);
         return EmailDispatchResult.From(EmailDispatchOutcome.PermanentFailure, error: reason);
     }
 

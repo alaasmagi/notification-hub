@@ -1,0 +1,28 @@
+@model DeliveryDto
+
+@{
+    ViewData["Title"] = "Delivery details";
+}
+
+<header class="page-header">
+    <div class="page-header__title">
+        <p class="kicker">Delivery log</p>
+        <h1>Delivery details</h1>
+    </div>
+</header>
+
+<div class="section medium">
+    <dl class="card details">
+        <div class="details__row"><dt>Message ID</dt><dd>@Model.MessageId</dd></div>
+        <div class="details__row"><dt>Channel</dt><dd>@Model.Channel</dd></div>
+        <div class="details__row"><dt>Tenant</dt><dd>@Model.Tenant</dd></div>
+        <div class="details__row"><dt>Source</dt><dd><code class="code-chip">@Model.Source</code></dd></div>
+        <div class="details__row"><dt>Type</dt><dd class="mono">@Model.NotificationType</dd></div>
+        <div class="details__row"><dt>To</dt><dd>@Model.Recipient</dd></div>
+        <div class="details__row"><dt>Error</dt><dd>@Model.Error</dd></div>
+        <div class="details__row"><dt>Title</dt><dd>@Model.Title</dd></div>
+        <div class="details__row"><dt>Status</dt><dd><partial name="_DeliveryStatus" model="Model.Status"/></dd></div>
+        <div class="details__row"><dt>Sent at</dt><dd class="mono">@Model.SentAt?.ToString("u")</dd></div>
+    </dl>
+    <div><a class="btn btn--secondary" asp-action="Index">Back to deliveries</a></div>
+</div>

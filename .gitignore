@@ -446,3 +446,6 @@ Desktop.ini
 .save
 .pem
 .claude
+
+bin\\Debug*
+obj\\Debug*

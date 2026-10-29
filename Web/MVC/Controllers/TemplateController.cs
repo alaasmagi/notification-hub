@@ -1,6 +1,7 @@
 using Base.Contracts.DataAccess;
 using Contracts.DataAccess;
-using Domain;
+using DTO.Web;
+using DTO.Web.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,18 +13,19 @@ namespace Web.MVC.Controllers;
 public class TemplateController : Controller
 {
     private readonly IClientRepository _clientRepository;
-    private readonly ISenderIdentityRepository _senderIdentityRepository;
+    private readonly INotificationTypeRepository _notificationTypeRepository;
     private readonly ITemplateRepository _templateRepository;
+    private readonly TemplateDtoMapper _mapper = new();
     private readonly IBaseUow _uow;
 
     public TemplateController(
         IClientRepository clientRepository,
-        ISenderIdentityRepository senderIdentityRepository,
+        INotificationTypeRepository notificationTypeRepository,
         ITemplateRepository templateRepository,
         IBaseUow uow)
     {
         _clientRepository = clientRepository;
-        _senderIdentityRepository = senderIdentityRepository;
+        _notificationTypeRepository = notificationTypeRepository;
         _templateRepository = templateRepository;
         _uow = uow;
     }
@@ -31,53 +33,39 @@ public class TemplateController : Controller
     public async Task<IActionResult> Index()
     {
         var templates = await _templateRepository.GetAllForAdminAsync();
-        var senderIdentities = await _senderIdentityRepository.GetAllForAdminAsync();
-        var clients = (await _clientRepository.GetAllForAdminAsync())
-            .ToDictionary(x => x.Id, x => x.ServiceName);
-        var senders = senderIdentities.ToDictionary(x => x.Id);
-
-        var rows = templates
-            .Select(template =>
-            {
-                senders.TryGetValue(template.SenderIdentityId, out var senderIdentity);
-                var clientServiceName = senderIdentity is null
-                    ? "Unknown"
-                    : clients.GetValueOrDefault(senderIdentity.ClientId, "Unknown");
-
-                return new TemplateIndexRow
-                {
-                    Template = template,
-                    ClientServiceName = clientServiceName,
-                    SenderEmailType = senderIdentity?.EmailType ?? "Unknown",
-                    SenderFromAddress = senderIdentity?.FromAddress ?? "Unknown"
-                };
-            })
-            .ToList();
+        var types = (await _notificationTypeRepository.GetAllForAdminAsync()).ToDictionary(x => x.Id);
+        var clients = (await _clientRepository.GetAllForAdminAsync()).ToDictionary(x => x.Id, x => x.Source);
+        var rows = templates.Select(template => new TemplateIndexRow
+        {
+            Template = _mapper.Map(template)!,
+            ClientSource = clients.GetValueOrDefault(types[template.NotificationTypeId].ClientId, "Unknown"),
+            NotificationTypeKey = types[template.NotificationTypeId].Key
+        }).ToList();
 
         return View(rows);
     }
 
     public async Task<IActionResult> Create()
     {
-        await LoadSenderIdentitiesAsync();
-        return View(new Template { IsActive = true });
+        await LoadNotificationTypesAsync();
+        return View(new TemplateDto { IsActive = true });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Template template)
+    public async Task<IActionResult> Create(TemplateDto template)
     {
         if (!ModelState.IsValid)
         {
-            await LoadSenderIdentitiesAsync();
+            await LoadNotificationTypesAsync();
             return View(template);
         }
 
-        var response = await _templateRepository.CreateAsync(template);
+        var response = await _templateRepository.CreateAsync(_mapper.Map(template)!);
         if (!response.Successful)
         {
             ModelState.AddModelError(string.Empty, response.Error!.Message);
-            await LoadSenderIdentitiesAsync();
+            await LoadNotificationTypesAsync();
             return View(template);
         }
 
@@ -88,19 +76,19 @@ public class TemplateController : Controller
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var template = await _templateRepository.GetForAdminAsync(id);
+        var template = _mapper.Map(await _templateRepository.GetForAdminAsync(id));
         if (template is null)
         {
             return NotFound();
         }
 
-        await LoadSenderIdentitiesAsync();
+        await LoadNotificationTypesAsync();
         return View(template);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, Template template)
+    public async Task<IActionResult> Edit(Guid id, TemplateDto template)
     {
         if (id != template.Id)
         {
@@ -109,15 +97,15 @@ public class TemplateController : Controller
 
         if (!ModelState.IsValid)
         {
-            await LoadSenderIdentitiesAsync();
+            await LoadNotificationTypesAsync();
             return View(template);
         }
 
-        var response = await _templateRepository.UpdateAsync(id, template, null, Guid.Empty);
+        var response = await _templateRepository.UpdateAsync(id, _mapper.Map(template)!, null, Guid.Empty);
         if (!response.Successful)
         {
             ModelState.AddModelError(string.Empty, response.Error!.Message);
-            await LoadSenderIdentitiesAsync();
+            await LoadNotificationTypesAsync();
             return View(template);
         }
 
@@ -150,23 +138,17 @@ public class TemplateController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task LoadSenderIdentitiesAsync()
+    private async Task LoadNotificationTypesAsync()
     {
         var clients = (await _clientRepository.GetAllForAdminAsync())
-            .ToDictionary(x => x.Id, x => x.ServiceName);
+            .ToDictionary(x => x.Id, x => x.Source);
 
-        var senderIdentities = (await _senderIdentityRepository.GetAllForAdminAsync())
-            .OrderBy(x => x.EmailType)
-            .ThenBy(x => x.FromAddress)
-            .Select(x => new SenderIdentityOption
+        ViewBag.NotificationTypes = (await _notificationTypeRepository.GetAllForAdminAsync())
+            .Select(x => new NotificationTypeOption
             {
                 Id = x.Id,
-                ClientServiceName = clients.GetValueOrDefault(x.ClientId, "Unknown"),
-                EmailType = x.EmailType,
-                FromAddress = x.FromAddress
-            })
-            .ToList();
-
-        ViewBag.SenderIdentities = senderIdentities;
+                ClientSource = clients.GetValueOrDefault(x.ClientId, "Unknown"),
+                Key = x.Key
+            }).ToList();
     }
 }

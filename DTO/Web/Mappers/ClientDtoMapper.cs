@@ -12,7 +12,7 @@ public class ClientDtoMapper : IMapper<ClientDto, Client>
             : new ClientDto
             {
                 Id = entity.Id,
-                ServiceName = entity.ServiceName,
+                Source = entity.Source,
                 DisplayName = entity.DisplayName,
                 IsActive = entity.IsActive
             };
@@ -30,7 +30,7 @@ public class ClientDtoMapper : IMapper<ClientDto, Client>
             : new Client
             {
                 Id = entity.Id,
-                ServiceName = entity.ServiceName,
+                Source = entity.Source,
                 DisplayName = entity.DisplayName,
                 IsActive = entity.IsActive
             };

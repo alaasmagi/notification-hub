@@ -10,7 +10,7 @@
         <p>A microservice for centralized transactional email routing, template rendering, sender management, and delivery review.</p>
         <div class="actions">
             <a class="btn btn--primary" asp-controller="Client" asp-action="Index">Open admin</a>
-            <a class="btn btn--secondary" asp-controller="Email" asp-action="Index">View deliveries</a>
+            <a class="btn btn--secondary" asp-controller="Delivery" asp-action="Index">View deliveries</a>
         </div>
     </section>
 
@@ -19,17 +19,17 @@
             <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></span>
             <span class="action-card__text"><span class="kicker">Clients</span><strong>Manage service mappings</strong></span>
         </a>
-        <a class="card action-card" asp-controller="SenderIdentity" asp-action="Index">
+        <a class="card action-card" asp-controller="EmailSender" asp-action="Index">
             <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-at-sign"></use></svg></span>
-            <span class="action-card__text"><span class="kicker">Senders</span><strong>Control sender identities</strong></span>
+            <span class="action-card__text"><span class="kicker">Senders</span><strong>Control email senders</strong></span>
         </a>
         <a class="card action-card" asp-controller="Template" asp-action="Index">
             <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-file-code"></use></svg></span>
             <span class="action-card__text"><span class="kicker">Templates</span><strong>Edit database cshtml</strong></span>
         </a>
-        <a class="card action-card" asp-controller="Email" asp-action="Index">
+        <a class="card action-card" asp-controller="Delivery" asp-action="Index">
             <span class="icon-tile"><svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg></span>
-            <span class="action-card__text"><span class="kicker">Emails</span><strong>Review delivery status</strong></span>
+            <span class="action-card__text"><span class="kicker">Deliveries</span><strong>Review delivery status</strong></span>
         </a>
     </section>
 }

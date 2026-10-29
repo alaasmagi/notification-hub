@@ -3,13 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Context;
 
-
 public class AppDbContext : DbContext
 {
     public DbSet<ClientEntity> Clients { get; set; } = default!;
-    public DbSet<SenderIdentityEntity> SenderIdentities { get; set; } = default!;
+    public DbSet<NotificationTypeEntity> NotificationTypes { get; set; } = default!;
+    public DbSet<EmailSenderEntity> EmailSenders { get; set; } = default!;
     public DbSet<TemplateEntity> Templates { get; set; } = default!;
-    public DbSet<EmailEntity> Emails { get; set; } = default!;
+    public DbSet<DeliveryEntity> Deliveries { get; set; } = default!;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -18,105 +18,20 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        ConfigureClients(modelBuilder);
-        ConfigureSenderIdentities(modelBuilder);
-        ConfigureTemplates(modelBuilder);
-        ConfigureEmails(modelBuilder);
-    }
-
-    private static void ConfigureClients(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<ClientEntity>()
-            .HasIndex(x => x.ServiceName)
-            .IsUnique();
-
-        modelBuilder.Entity<ClientEntity>()
-            .Property(x => x.ServiceName)
-            .IsRequired();
-
-        modelBuilder.Entity<ClientEntity>()
-            .Property(x => x.DisplayName)
-            .IsRequired();
-    }
-
-    private static void ConfigureSenderIdentities(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<SenderIdentityEntity>()
-            .HasIndex(x => new { x.ClientId, x.EmailType, x.Tenant })
-            .IsUnique();
-
-        modelBuilder.Entity<SenderIdentityEntity>()
-            .Property(x => x.EmailType)
-            .IsRequired();
-
-        modelBuilder.Entity<SenderIdentityEntity>()
-            .Property(x => x.FromAddress)
-            .IsRequired();
-
-        modelBuilder.Entity<SenderIdentityEntity>()
-            .Property(x => x.DisplayName)
-            .IsRequired();
-
-        modelBuilder.Entity<SenderIdentityEntity>()
-            .HasOne<ClientEntity>()
-            .WithMany()
-            .HasForeignKey(x => x.ClientId)
-            .OnDelete(DeleteBehavior.Restrict);
-    }
-
-    private static void ConfigureTemplates(ModelBuilder modelBuilder)
-    {
+        modelBuilder.HasDefaultSchema("notification");
+        modelBuilder.Entity<ClientEntity>().HasIndex(x => x.Source).IsUnique();
+        modelBuilder.Entity<NotificationTypeEntity>().HasIndex(x => new { x.ClientId, x.Key }).IsUnique();
+        modelBuilder.Entity<NotificationTypeEntity>().HasOne<ClientEntity>().WithMany()
+            .HasForeignKey(x => x.ClientId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<EmailSenderEntity>().HasIndex(x => new { x.ClientId, x.Tenant }).IsUnique();
+        modelBuilder.Entity<EmailSenderEntity>().HasOne<ClientEntity>().WithMany()
+            .HasForeignKey(x => x.ClientId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<TemplateEntity>()
-            .HasIndex(x => new { x.SenderIdentityId, x.LanguageCode })
-            .IsUnique();
-
-        modelBuilder.Entity<TemplateEntity>()
-            .Property(x => x.LanguageCode)
-            .IsRequired();
-
-        modelBuilder.Entity<TemplateEntity>()
-            .Property(x => x.SubjectTemplate)
-            .IsRequired();
-
-        modelBuilder.Entity<TemplateEntity>()
-            .Property(x => x.HtmlBodyTemplate)
-            .IsRequired();
-
-        modelBuilder.Entity<TemplateEntity>()
-            .HasOne<SenderIdentityEntity>()
-            .WithMany()
-            .HasForeignKey(x => x.SenderIdentityId)
-            .OnDelete(DeleteBehavior.Restrict);
-    }
-
-    private static void ConfigureEmails(ModelBuilder modelBuilder)
-    {
-        // A unique envelope id guards against concurrent duplicate sends.
-        modelBuilder.Entity<EmailEntity>()
-            .HasIndex(x => x.MessageId)
-            .IsUnique();
-
-        modelBuilder.Entity<EmailEntity>()
-            .HasIndex(x => new { x.ServiceName, x.EmailType });
-
-        modelBuilder.Entity<EmailEntity>()
-            .HasIndex(x => x.Status);
-
-        modelBuilder.Entity<EmailEntity>()
-            .Property(x => x.MessageId)
-            .IsRequired();
-
-        modelBuilder.Entity<EmailEntity>()
-            .Property(x => x.ServiceName)
-            .IsRequired();
-
-        modelBuilder.Entity<EmailEntity>()
-            .Property(x => x.EmailType)
-            .IsRequired();
-
-        modelBuilder.Entity<EmailEntity>()
-            .Property(x => x.ToRecipients)
-            .IsRequired();
+            .HasIndex(x => new { x.NotificationTypeId, x.Channel, x.Tenant, x.LanguageCode }).IsUnique();
+        modelBuilder.Entity<TemplateEntity>().HasOne<NotificationTypeEntity>().WithMany()
+            .HasForeignKey(x => x.NotificationTypeId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<DeliveryEntity>().HasIndex(x => new { x.MessageId, x.Channel }).IsUnique();
+        modelBuilder.Entity<DeliveryEntity>().HasIndex(x => new { x.Source, x.NotificationType });
+        modelBuilder.Entity<DeliveryEntity>().HasIndex(x => x.Status);
     }
 }

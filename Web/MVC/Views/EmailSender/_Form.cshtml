@@ -1,0 +1,76 @@
+@model EmailSenderDto
+@{
+    var clients = (IReadOnlyList<ClientOption>)(ViewBag.Clients ?? new List<ClientOption>());
+    var selectedClient = clients.FirstOrDefault(x => x.Id == Model.ClientId) ?? clients.FirstOrDefault();
+}
+
+<div class="form-row form-row--sender">
+    <div class="field">
+        <label class="field__label" asp-for="ClientId"></label>
+        <div class="field__control">
+            <select class="input" id="ClientId" name="ClientId">
+                @foreach (var client in clients)
+                {
+                    <option value="@client.Id" data-service-name="@client.Source" selected="@(client.Id == selectedClient?.Id)">
+                        @client.Source — @client.DisplayName
+                    </option>
+                }
+            </select>
+            <svg class="icon icon--end" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </div>
+        <span asp-validation-for="ClientId"></span>
+    </div>
+
+    <div class="field">
+        <label class="field__label" for="ClientSource">Client source</label>
+        <input class="input mono" id="ClientSource" value="@selectedClient?.Source" readonly/>
+    </div>
+</div>
+
+<div class="field">
+    <label class="field__label" asp-for="Tenant"></label>
+    <input class="input mono" asp-for="Tenant" placeholder="Empty for shared fallback"/>
+    <span asp-validation-for="Tenant"></span>
+</div>
+
+<div class="field">
+    <label class="field__label" asp-for="FromAddress"></label>
+    <input class="input" asp-for="FromAddress" placeholder="e.g. no-reply@alaasmagi.dev"/>
+    <span asp-validation-for="FromAddress"></span>
+</div>
+
+<div class="form-row">
+    <div class="field">
+        <label class="field__label" asp-for="DisplayName"></label>
+        <input class="input" asp-for="DisplayName"/>
+        <span asp-validation-for="DisplayName"></span>
+    </div>
+
+    <div class="field">
+        <label class="field__label" asp-for="ReplyTo"></label>
+        <input class="input" asp-for="ReplyTo"/>
+        <span asp-validation-for="ReplyTo"></span>
+    </div>
+</div>
+
+<label class="check">
+    <input asp-for="IsActive"/>
+    <span>@Html.DisplayNameFor(m => m.IsActive)</span>
+</label>
+
+<script>
+    (() => {
+        const clientSelect = document.getElementById("ClientId");
+        const sourceInput = document.getElementById("ClientSource");
+        if (!clientSelect || !sourceInput) {
+            return;
+        }
+
+        const syncSource = () => {
+            sourceInput.value = clientSelect.selectedOptions[0]?.dataset.source || "";
+        };
+
+        clientSelect.addEventListener("change", syncSource);
+        syncSource();
+    })();
+</script>

@@ -1,4 +1,4 @@
-@model IEnumerable<Client>
+@model IEnumerable<ClientDto>
 
 @{
     ViewData["Title"] = "Clients";
@@ -20,7 +20,7 @@
     <table class="data-table">
         <thead>
         <tr>
-            <th>Service name</th>
+            <th>Source</th>
             <th>Display name</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
@@ -30,14 +30,14 @@
         @foreach (var client in Model)
         {
             <tr>
-                <td><code class="code-chip">@client.ServiceName</code></td>
+                <td><code class="code-chip">@client.Source</code></td>
                 <td>@client.DisplayName</td>
                 <td><partial name="_ActiveBadge" model="client.IsActive"/></td>
                 <td class="actions-col">
                     <div class="row-actions">
                         <a class="icon-btn" asp-action="Edit" asp-route-id="@client.Id" aria-label="Edit client" title="Edit client"><svg class="icon" aria-hidden="true"><use href="#i-pencil"></use></svg></a>
                         <form asp-action="Delete" asp-route-id="@client.Id" method="post"
-                              data-confirm="Sender identities must be deleted first. This action cannot be undone."
+                              data-confirm="Email senders and notification types must be deleted first. This action cannot be undone."
                               data-confirm-title="Delete this client?" data-confirm-label="Delete client">
                             <button type="submit" class="icon-btn icon-btn--danger" aria-label="Delete client" title="Delete client"><svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg></button>
                         </form>
@@ -53,4 +53,4 @@
     </table>
 </div>
 
-<p class="footnote">A client can only be deleted after its sender identities have been removed.</p>
+<p class="footnote">A client can only be deleted after its email senders and notification types have been removed.</p>
