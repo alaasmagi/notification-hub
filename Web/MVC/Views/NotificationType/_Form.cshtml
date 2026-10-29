@@ -1,0 +1,56 @@
+@model NotificationTypeDto
+@{
+    var clients = (IReadOnlyList<ClientOption>)(ViewBag.Clients ?? new List<ClientOption>());
+    var selectedClient = clients.FirstOrDefault(x => x.Id == Model.ClientId) ?? clients.FirstOrDefault();
+}
+
+<div class="form-row form-row--sender">
+    <div class="field">
+        <label class="field__label" asp-for="ClientId"></label>
+        <div class="field__control">
+            <select class="input" id="ClientId" name="ClientId">
+                @foreach (var client in clients)
+                {
+                    <option value="@client.Id" data-service-name="@client.Source" selected="@(client.Id == selectedClient?.Id)">
+                        @client.Source — @client.DisplayName
+                    </option>
+                }
+            </select>
+            <svg class="icon icon--end" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </div>
+        <span asp-validation-for="ClientId"></span>
+    </div>
+
+    <div class="field">
+        <label class="field__label" for="ClientSource">Client source</label>
+        <input class="input mono" id="ClientSource" value="@selectedClient?.Source" readonly/>
+    </div>
+</div>
+
+<div class="field">
+    <label class="field__label" asp-for="Key"></label>
+    <input class="input mono" asp-for="Key" placeholder="Routing-key action, e.g. user-verify"/>
+    <span asp-validation-for="Key"></span>
+</div>
+
+<label class="check">
+    <input asp-for="IsActive"/>
+    <span>@Html.DisplayNameFor(m => m.IsActive)</span>
+</label>
+
+<script>
+    (() => {
+        const clientSelect = document.getElementById("ClientId");
+        const sourceInput = document.getElementById("ClientSource");
+        if (!clientSelect || !sourceInput) {
+            return;
+        }
+
+        const syncSource = () => {
+            sourceInput.value = clientSelect.selectedOptions[0]?.dataset.source || "";
+        };
+
+        clientSelect.addEventListener("change", syncSource);
+        syncSource();
+    })();
+</script>

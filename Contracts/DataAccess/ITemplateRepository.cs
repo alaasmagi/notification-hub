@@ -7,5 +7,5 @@ public interface ITemplateRepository : IBaseRepository<Template>
 {
     Task<IReadOnlyList<Template>> GetAllForAdminAsync();
     Task<Template?> GetForAdminAsync(Guid id);
-    Task<Template?> GetActiveAsync(Guid senderIdentityId, string languageCode);
+    Task<Template?> GetActiveAsync(Guid notificationTypeId, EChannel channel, string tenant, string languageCode);
 }

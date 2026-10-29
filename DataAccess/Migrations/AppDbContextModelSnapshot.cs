@@ -17,6 +17,7 @@ namespace DataAccess.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("notification")
                 .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -44,7 +45,7 @@ namespace DataAccess.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("ServiceName")
+                    b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -59,17 +60,20 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ServiceName")
+                    b.HasIndex("Source")
                         .IsUnique();
 
-                    b.ToTable("Clients");
+                    b.ToTable("Clients", "notification");
                 });
 
-            modelBuilder.Entity("DTO.DataAccess.EmailEntity", b =>
+            modelBuilder.Entity("DTO.DataAccess.DeliveryEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -79,24 +83,28 @@ namespace DataAccess.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("EmailType")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<string>("Error")
+                        .HasColumnType("text");
 
                     b.Property<string>("MessageId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("ReplyTo")
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
 
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ServiceName")
+                    b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -104,19 +112,14 @@ namespace DataAccess.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Subject")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
                     b.Property<string>("Tenant")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("ToRecipients")
-                        .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
+                    b.Property<string>("Title")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -128,17 +131,17 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MessageId")
-                        .IsUnique();
-
                     b.HasIndex("Status");
 
-                    b.HasIndex("ServiceName", "EmailType");
+                    b.HasIndex("MessageId", "Channel")
+                        .IsUnique();
 
-                    b.ToTable("Emails");
+                    b.HasIndex("Source", "NotificationType");
+
+                    b.ToTable("Deliveries", "notification");
                 });
 
-            modelBuilder.Entity("DTO.DataAccess.SenderIdentityEntity", b =>
+            modelBuilder.Entity("DTO.DataAccess.EmailSenderEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -156,11 +159,6 @@ namespace DataAccess.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("EmailType")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -192,16 +190,19 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId", "EmailType", "Tenant")
+                    b.HasIndex("ClientId", "Tenant")
                         .IsUnique();
 
-                    b.ToTable("SenderIdentities");
+                    b.ToTable("EmailSenders", "notification");
                 });
 
-            modelBuilder.Entity("DTO.DataAccess.TemplateEntity", b =>
+            modelBuilder.Entity("DTO.DataAccess.NotificationTypeEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClientId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -212,10 +213,51 @@ namespace DataAccess.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("HtmlBodyTemplate")
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("NotificationTypes", "notification");
+                });
+
+            modelBuilder.Entity("DTO.DataAccess.TemplateEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(524288)
                         .HasColumnType("character varying(524288)");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -225,10 +267,15 @@ namespace DataAccess.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<Guid>("SenderIdentityId")
+                    b.Property<Guid>("NotificationTypeId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("SubjectTemplate")
+                    b.Property<string>("Tenant")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
@@ -243,13 +290,22 @@ namespace DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SenderIdentityId", "LanguageCode")
+                    b.HasIndex("NotificationTypeId", "Channel", "Tenant", "LanguageCode")
                         .IsUnique();
 
-                    b.ToTable("Templates");
+                    b.ToTable("Templates", "notification");
                 });
 
-            modelBuilder.Entity("DTO.DataAccess.SenderIdentityEntity", b =>
+            modelBuilder.Entity("DTO.DataAccess.EmailSenderEntity", b =>
+                {
+                    b.HasOne("DTO.DataAccess.ClientEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DTO.DataAccess.NotificationTypeEntity", b =>
                 {
                     b.HasOne("DTO.DataAccess.ClientEntity", null)
                         .WithMany()
@@ -260,9 +316,9 @@ namespace DataAccess.Migrations
 
             modelBuilder.Entity("DTO.DataAccess.TemplateEntity", b =>
                 {
-                    b.HasOne("DTO.DataAccess.SenderIdentityEntity", null)
+                    b.HasOne("DTO.DataAccess.NotificationTypeEntity", null)
                         .WithMany()
-                        .HasForeignKey("SenderIdentityId")
+                        .HasForeignKey("NotificationTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

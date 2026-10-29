@@ -1,0 +1,54 @@
+@model IEnumerable<NotificationTypeIndexRow>
+
+@{
+    ViewData["Title"] = "Notification types";
+}
+
+<header class="page-header">
+    <div class="page-header__title">
+        <p class="kicker">Notification types</p>
+        <h1>Notification types</h1>
+    </div>
+    <div class="page-header__actions">
+        <a class="btn btn--primary" asp-action="Create"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>Create notification type</a>
+    </div>
+</header>
+
+<partial name="_TempDataAlerts"/>
+
+<div class="card table-card">
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Client source</th>
+            <th>Key</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td><code class="code-chip">@item.ClientSource</code></td>
+                <td class="mono">@item.NotificationType.Key</td>
+                <td><partial name="_ActiveBadge" model="item.NotificationType.IsActive"/></td>
+                <td class="actions-col">
+                    <div class="row-actions">
+                        <a class="icon-btn" asp-action="Edit" asp-route-id="@item.NotificationType.Id" aria-label="Edit notification type" title="Edit notification type"><svg class="icon" aria-hidden="true"><use href="#i-pencil"></use></svg></a>
+                        <form asp-action="Delete" asp-route-id="@item.NotificationType.Id" method="post"
+                              data-confirm="Templates must be deleted first. This action cannot be undone."
+                              data-confirm-title="Delete this notification type?" data-confirm-label="Delete notification type">
+                            <button type="submit" class="icon-btn icon-btn--danger" aria-label="Delete notification type" title="Delete notification type"><svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="4" class="empty">No notification types yet.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

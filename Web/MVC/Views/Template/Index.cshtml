@@ -20,10 +20,12 @@
     <table class="data-table">
         <thead>
         <tr>
-            <th>Client service</th>
-            <th>Sender identity</th>
+            <th>Client source</th>
+            <th>Notification type</th>
+            <th>Channel</th>
+            <th>Tenant</th>
             <th>Language</th>
-            <th>Subject</th>
+            <th>Title</th>
             <th>Status</th>
             <th class="actions-col">Actions</th>
         </tr>
@@ -32,15 +34,12 @@
         @foreach (var template in Model)
         {
             <tr>
-                <td><code class="code-chip">@template.ClientServiceName</code></td>
-                <td>
-                    <div class="stack-cell">
-                        <span class="mono">@template.SenderEmailType</span>
-                        <span>@template.SenderFromAddress</span>
-                    </div>
-                </td>
+                <td><code class="code-chip">@template.ClientSource</code></td>
+                <td class="mono">@template.NotificationTypeKey</td>
+                <td>@template.Template.Channel</td>
+                <td>@template.Template.Tenant</td>
                 <td><code class="code-chip">@template.Template.LanguageCode</code></td>
-                <td>@template.Template.SubjectTemplate</td>
+                <td>@template.Template.Title</td>
                 <td><partial name="_ActiveBadge" model="template.Template.IsActive"/></td>
                 <td class="actions-col">
                     <div class="row-actions">
@@ -56,7 +55,7 @@
         }
         @if (!Model.Any())
         {
-            <tr><td colspan="6" class="empty">No templates yet.</td></tr>
+            <tr><td colspan="8" class="empty">No templates yet.</td></tr>
         }
         </tbody>
     </table>

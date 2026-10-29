@@ -123,7 +123,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
                 MessageId = envelope.Id,
                 Source = keySource,
                 Tenant = envelope.Tenant,
-                EmailType = keyAction,
+                NotificationType = keyAction,
                 ToEmail = recipient,
                 LanguageCode = string.IsNullOrWhiteSpace(locale) ? "en" : locale,
                 CorrelationId = envelope.Id,

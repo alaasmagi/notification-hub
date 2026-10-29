@@ -49,14 +49,17 @@
                 <a class="nav-item" asp-area="" asp-controller="Client" asp-action="Index" aria-current="@Current("Client")">
                     <svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg>Clients
                 </a>
-                <a class="nav-item" asp-area="" asp-controller="SenderIdentity" asp-action="Index" aria-current="@Current("SenderIdentity")">
+                <a class="nav-item" asp-area="" asp-controller="EmailSender" asp-action="Index" aria-current="@Current("EmailSender")">
                     <svg class="icon" aria-hidden="true"><use href="#i-at-sign"></use></svg>Senders
+                </a>
+                <a class="nav-item" asp-area="" asp-controller="NotificationType" asp-action="Index" aria-current="@Current("NotificationType")">
+                    <svg class="icon" aria-hidden="true"><use href="#i-file-code"></use></svg>Notification types
                 </a>
                 <a class="nav-item" asp-area="" asp-controller="Template" asp-action="Index" aria-current="@Current("Template")">
                     <svg class="icon" aria-hidden="true"><use href="#i-file-code"></use></svg>Templates
                 </a>
-                <a class="nav-item" asp-area="" asp-controller="Email" asp-action="Index" aria-current="@Current("Email")">
-                    <svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>Emails
+                <a class="nav-item" asp-area="" asp-controller="Delivery" asp-action="Index" aria-current="@Current("Delivery")">
+                    <svg class="icon" aria-hidden="true"><use href="#i-mail"></use></svg>Deliveries
                 </a>
             </nav>
 

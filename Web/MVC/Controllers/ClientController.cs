@@ -1,6 +1,7 @@
 using Base.Contracts.DataAccess;
 using Contracts.DataAccess;
-using Domain;
+using DTO.Web;
+using DTO.Web.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace Web.MVC.Controllers;
 public class ClientController : Controller
 {
     private readonly IClientRepository _clientRepository;
+    private readonly ClientDtoMapper _mapper = new();
     private readonly IBaseUow _uow;
 
     public ClientController(IClientRepository clientRepository, IBaseUow uow)
@@ -22,24 +24,24 @@ public class ClientController : Controller
     public async Task<IActionResult> Index()
     {
         var clients = await _clientRepository.GetAllForAdminAsync();
-        return View(clients);
+        return View(_mapper.Map(clients));
     }
 
     public IActionResult Create()
     {
-        return View(new Client());
+        return View(new ClientDto());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(Client client)
+    public async Task<IActionResult> Create(ClientDto client)
     {
         if (!ModelState.IsValid)
         {
             return View(client);
         }
 
-        var response = await _clientRepository.CreateAsync(client);
+        var response = await _clientRepository.CreateAsync(_mapper.Map(client)!);
         if (!response.Successful)
         {
             ModelState.AddModelError(string.Empty, response.Error!.Message);
@@ -53,7 +55,7 @@ public class ClientController : Controller
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var client = await _clientRepository.GetForAdminAsync(id);
+        var client = _mapper.Map(await _clientRepository.GetForAdminAsync(id));
         if (client is null)
         {
             return NotFound();
@@ -64,7 +66,7 @@ public class ClientController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, Client client)
+    public async Task<IActionResult> Edit(Guid id, ClientDto client)
     {
         if (id != client.Id)
         {
@@ -76,7 +78,7 @@ public class ClientController : Controller
             return View(client);
         }
 
-        var response = await _clientRepository.UpdateAsync(id, client, null, Guid.Empty);
+        var response = await _clientRepository.UpdateAsync(id, _mapper.Map(client)!, null, Guid.Empty);
         if (!response.Successful)
         {
             ModelState.AddModelError(string.Empty, response.Error!.Message);
@@ -106,7 +108,7 @@ public class ClientController : Controller
         }
         catch (DbUpdateException)
         {
-            TempData["ErrorMessage"] = "Client cannot be deleted while sender identities reference it.";
+            TempData["ErrorMessage"] = "Client cannot be deleted while email senders or notification types reference it.";
         }
 
         return RedirectToAction(nameof(Index));

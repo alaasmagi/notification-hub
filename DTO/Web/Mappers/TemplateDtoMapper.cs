@@ -12,10 +12,12 @@ public class TemplateDtoMapper : IMapper<TemplateDto, Template>
             : new TemplateDto
             {
                 Id = entity.Id,
-                SenderIdentityId = entity.SenderIdentityId,
+                NotificationTypeId = entity.NotificationTypeId,
+                Channel = entity.Channel,
+                Tenant = entity.Tenant,
                 LanguageCode = entity.LanguageCode,
-                SubjectTemplate = entity.SubjectTemplate,
-                HtmlBodyTemplate = entity.HtmlBodyTemplate,
+                Title = entity.Title,
+                Body = entity.Body,
                 IsActive = entity.IsActive
             };
     }
@@ -32,10 +34,12 @@ public class TemplateDtoMapper : IMapper<TemplateDto, Template>
             : new Template
             {
                 Id = entity.Id,
-                SenderIdentityId = entity.SenderIdentityId,
+                NotificationTypeId = entity.NotificationTypeId,
+                Channel = entity.Channel,
+                Tenant = entity.Tenant,
                 LanguageCode = entity.LanguageCode,
-                SubjectTemplate = entity.SubjectTemplate,
-                HtmlBodyTemplate = entity.HtmlBodyTemplate,
+                Title = entity.Title,
+                Body = entity.Body,
                 IsActive = entity.IsActive
             };
     }

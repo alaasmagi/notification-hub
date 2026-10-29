@@ -16,9 +16,9 @@ public enum EmailDispatchOutcome
 public class EmailDispatchResult
 {
     public required EmailDispatchOutcome Outcome { get; init; }
-    public Guid? EmailId { get; init; }
+    public Guid? DeliveryId { get; init; }
     public string? Error { get; init; }
 
-    public static EmailDispatchResult From(EmailDispatchOutcome outcome, Guid? emailId = null, string? error = null)
-        => new() { Outcome = outcome, EmailId = emailId, Error = error };
+    public static EmailDispatchResult From(EmailDispatchOutcome outcome, Guid? deliveryId = null, string? error = null)
+        => new() { Outcome = outcome, DeliveryId = deliveryId, Error = error };
 }
