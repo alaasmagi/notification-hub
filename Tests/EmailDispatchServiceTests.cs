@@ -68,6 +68,24 @@ public class EmailDispatchServiceTests
     }
 
     [Theory]
+    [InlineData("password-reset")]
+    [InlineData("monthly-invoice")]
+    [InlineData("arbitrary-database-command")]
+    public async Task Command_IsResolvedByDatabaseKey(string command)
+    {
+        var request = Request();
+        request.NotificationType = command;
+        _types.Setup(x => x.GetActiveAsync(_client.Id, command)).ReturnsAsync(_type);
+        _available[("invoice-service", "et")] = new Template();
+
+        var result = await Service().SendTemplatedEmailAsync(request);
+
+        Assert.Equal(EmailDispatchOutcome.Sent, result.Outcome);
+        _types.Verify(x => x.GetActiveAsync(_client.Id, command), Times.Once);
+        Assert.Equal(command, _saved!.NotificationType);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
@@ -222,6 +240,6 @@ public class EmailDispatchServiceTests
     private SendTemplatedEmailRequest Request() => new()
     {
         MessageId = "message-1", Source = "identity-hub", Tenant = "invoice-service", NotificationType = "user-verify",
-        ToEmail = "user@example.com", LanguageCode = "et", Content = new object()
+        ToEmail = "user@example.com", LanguageCode = "et", Content = new TemplateContent()
     };
 }

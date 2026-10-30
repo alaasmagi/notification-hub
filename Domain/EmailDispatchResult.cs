@@ -1,4 +1,4 @@
-namespace Contracts.External.Models;
+namespace Domain;
 
 public enum EmailDispatchOutcome
 {

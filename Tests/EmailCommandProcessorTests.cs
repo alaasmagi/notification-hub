@@ -1,8 +1,6 @@
-using System.Dynamic;
-using System.Text;
 using Application;
 using Contracts.Application;
-using Contracts.External.Models;
+using Domain;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -12,34 +10,38 @@ namespace Tests;
 public class EmailCommandProcessorTests
 {
     [Theory]
-    [InlineData("invoice")]
-    [InlineData("email-user-verify")]
-    [InlineData("custom-command")]
-    public async Task RoutingKey_MapsAnyCommandAndTenantWithoutChangingContent(string command)
+    [InlineData(EmailDispatchOutcome.Sent, MessageDisposition.Ack)]
+    [InlineData(EmailDispatchOutcome.AlreadySent, MessageDisposition.Ack)]
+    [InlineData(EmailDispatchOutcome.TransientFailure, MessageDisposition.RequeueTransient)]
+    [InlineData(EmailDispatchOutcome.PermanentFailure, MessageDisposition.RejectNoRequeue)]
+    public async Task DomainCommand_IsDispatchedWithoutCommandAllowlist(EmailDispatchOutcome outcome, MessageDisposition expected)
     {
-        SendTemplatedEmailRequest? dispatched = null;
+        var request = Request();
         var dispatch = new Mock<IEmailDispatchService>();
-        dispatch.Setup(x => x.SendTemplatedEmailAsync(It.IsAny<SendTemplatedEmailRequest>(), It.IsAny<CancellationToken>()))
-            .Callback<SendTemplatedEmailRequest, CancellationToken>((request, _) => dispatched = request)
-            .ReturnsAsync(EmailDispatchResult.From(EmailDispatchOutcome.Sent));
+        dispatch.Setup(x => x.SendTemplatedEmailAsync(request, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmailDispatchResult.From(outcome));
         var processor = new EmailCommandProcessor(dispatch.Object, NullLogger<EmailCommandProcessor>.Instance);
-        var body = Encoding.UTF8.GetBytes("""
-            {"id":"message-1","source":"invoice-service","tenant":"payload-tenant","action":"invoice","timestamp":"2026-10-29T20:00:00.000Z","contentVersion":"1.0",
-             "content":{"email":"user@example.com","locale":"et","invoiceIdentifier":"INV-1","details":{"enabled":true,"amount":12.5,"count":2,"optional":null},"rows":[{"name":"First"}]}}
-            """);
-        var result = await processor.ProcessAsync($"invoice-service.invoice-service.{command}", body);
-        Assert.Equal(MessageDisposition.Ack, result);
-        Assert.Equal("invoice-service", dispatched!.Source);
-        Assert.Equal("invoice-service", dispatched.Tenant);
-        Assert.Equal(command, dispatched.NotificationType);
-        Assert.Equal("message-1", dispatched.MessageId);
-        dynamic content = Assert.IsType<ExpandoObject>(dispatched.Content);
-        Assert.Equal("user@example.com", (string)content.email);
-        Assert.Equal("INV-1", (string)content.invoiceIdentifier);
-        Assert.True((bool)content.details.enabled);
-        Assert.Equal(12.5m, (decimal)content.details.amount);
-        Assert.Equal(2L, (long)content.details.count);
-        Assert.Null((object?)content.details.optional);
-        Assert.Equal("First", (string)content.rows[0].name);
+        Assert.Equal(expected, await processor.ProcessAsync(request));
+        dispatch.Verify(x => x.SendTemplatedEmailAsync(request, It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ExpiredOrInvalidCommand_DoesNotDispatch(bool expired)
+    {
+        var request = Request();
+        if (expired) request.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        else request.ToEmail = "";
+        var dispatch = new Mock<IEmailDispatchService>();
+        var processor = new EmailCommandProcessor(dispatch.Object, NullLogger<EmailCommandProcessor>.Instance);
+        Assert.Equal(expired ? MessageDisposition.Ack : MessageDisposition.RejectNoRequeue, await processor.ProcessAsync(request));
+        dispatch.VerifyNoOtherCalls();
+    }
+
+    private static SendTemplatedEmailRequest Request() => new()
+    {
+        MessageId = "message-1", Source = "identity-hub", Tenant = "food-app",
+        NotificationType = "any-database-command", ToEmail = "user@example.com"
+    };
 }

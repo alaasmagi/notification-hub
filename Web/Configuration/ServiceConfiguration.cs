@@ -101,6 +101,8 @@ public static class ServiceConfiguration
             PrefetchCount = ParsePrefetchCount(Env.Get("RABBITMQ_PREFETCH"))
         });
         services.AddScoped<IEmailCommandProcessor, EmailCommandProcessor>();
+        services.AddSingleton<DTO.External.RabbitMQ.Mappers.EmailCommandDtoMapper>();
+        services.AddSingleton<EmailCommandReader>();
         services.AddRabbitMqConsumer<EmailEventConsumer>();
 
         return services;

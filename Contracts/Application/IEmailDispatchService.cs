@@ -1,4 +1,4 @@
-using Contracts.External.Models;
+using Domain;
 
 namespace Contracts.Application;
 

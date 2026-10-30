@@ -11,6 +11,7 @@ namespace External.RazorLight;
 public class RazorEmailTemplateRenderer : IEmailTemplateRenderer
 {
     private readonly RazorLightEngine _engine;
+    private readonly EmailTemplateContentMapper _contentMapper = new();
 
     public RazorEmailTemplateRenderer()
     {
@@ -24,7 +25,7 @@ public class RazorEmailTemplateRenderer : IEmailTemplateRenderer
         EmailTemplateModel model,
         CancellationToken cancellationToken = default)
     {
-        var content = (object)model.Content;
+        var content = _contentMapper.Map(model.Content)!;
 
         dynamic viewBag = new ExpandoObject();
         viewBag.Fmt = model.Fmt;

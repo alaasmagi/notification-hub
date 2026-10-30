@@ -1,5 +1,6 @@
 using Base.Message.RabbitMQ;
 using Contracts.Application;
+using Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,17 +15,20 @@ public class EmailEventConsumer : BackgroundService
 {
     private readonly RabbitMqConnectionManager _connectionManager;
     private readonly EmailQueueOptions _queueOptions;
+    private readonly EmailCommandReader _reader;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EmailEventConsumer> _logger;
 
     public EmailEventConsumer(
         RabbitMqConnectionManager connectionManager,
         EmailQueueOptions queueOptions,
+        EmailCommandReader reader,
         IServiceScopeFactory scopeFactory,
         ILogger<EmailEventConsumer> logger)
     {
         _connectionManager = connectionManager;
         _queueOptions = queueOptions;
+        _reader = reader;
         _scopeFactory = scopeFactory;
         _logger = logger;
     }
@@ -69,7 +73,10 @@ public class EmailEventConsumer : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var processor = scope.ServiceProvider.GetRequiredService<IEmailCommandProcessor>();
 
-            var disposition = await processor.ProcessAsync(ea.RoutingKey, ea.Body, stoppingToken);
+            var request = _reader.Read(ea.RoutingKey, ea.Body);
+            var disposition = request is null
+                ? MessageDisposition.RejectNoRequeue
+                : await processor.ProcessAsync(request, stoppingToken);
 
             switch (disposition)
             {

@@ -5,6 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <PreserveCompilationContext>true</PreserveCompilationContext>
+        <PreserveCompilationReferences>true</PreserveCompilationReferences>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,6 +21,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Application\Application.csproj" />
+      <ProjectReference Include="..\External\External.csproj" />
       <ProjectReference Include="..\Contracts\Contracts.csproj" />
       <ProjectReference Include="..\Domain\Domain.csproj" />
       <ProjectReference Include="..\DataAccess\DataAccess.csproj" />

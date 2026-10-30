@@ -1,4 +1,4 @@
-namespace Contracts.Application;
+namespace Domain;
 
 public enum MessageDisposition
 {
