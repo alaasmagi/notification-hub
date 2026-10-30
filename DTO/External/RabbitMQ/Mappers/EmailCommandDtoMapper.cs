@@ -10,18 +10,32 @@ public class EmailCommandDtoMapper : IMapper<EmailCommandDto, SendTemplatedEmail
     {
         if (entity?.Content is null) return null;
         var route = entity.RoutingKey.Split('.');
-        if (route.Length != 3 || entity.Content.Model.ValueKind != JsonValueKind.Object) return null;
+        if (route.Length != 3) return null;
+        var flatContent = entity.Content.Model.ValueKind == JsonValueKind.Undefined
+            && !string.IsNullOrWhiteSpace(entity.Content.Email);
+        if (!flatContent && entity.Content.Model.ValueKind != JsonValueKind.Object) return null;
+        var messageId = string.IsNullOrWhiteSpace(entity.MessageId) ? entity.Id : entity.MessageId;
+        var languageCode = flatContent ? entity.Content.Locale : entity.Content.LanguageCode;
+        var content = ReadObject(flatContent
+            ? JsonSerializer.SerializeToElement(entity.Content.Fields)
+            : entity.Content.Model);
+        if (flatContent)
+        {
+            content.Properties["Email"] = entity.Content.Email;
+            content.Properties["Locale"] = entity.Content.Locale;
+            content.Properties["ExpiresAt"] = entity.Content.ExpiresAt;
+        }
         return new SendTemplatedEmailRequest
         {
-            MessageId = entity.MessageId,
+            MessageId = messageId,
             Source = route[0],
             Tenant = route[1],
             NotificationType = route[2],
-            ToEmail = entity.Content.To,
-            LanguageCode = string.IsNullOrWhiteSpace(entity.Content.LanguageCode) ? "en" : entity.Content.LanguageCode,
-            CorrelationId = entity.MessageId,
+            ToEmail = flatContent ? entity.Content.Email : entity.Content.To,
+            LanguageCode = string.IsNullOrWhiteSpace(languageCode) ? "en" : languageCode,
+            CorrelationId = messageId,
             ExpiresAt = entity.Content.ExpiresAt,
-            Content = ReadObject(entity.Content.Model)
+            Content = content
         };
     }
 

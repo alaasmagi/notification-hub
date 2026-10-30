@@ -7,6 +7,8 @@ public record EmailCommandDto
 {
     [JsonIgnore]
     public string RoutingKey { get; init; } = "";
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = "";
     [JsonPropertyName("messageId")]
     public string MessageId { get; init; } = "";
     [JsonPropertyName("source")]
@@ -25,6 +27,12 @@ public record EmailCommandDto
 
 public record EmailContentDto
 {
+    [JsonPropertyName("email")]
+    public string Email { get; init; } = "";
+    [JsonPropertyName("locale")]
+    public string? Locale { get; init; }
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Fields { get; init; } = new();
     [JsonPropertyName("to")]
     public string To { get; init; } = "";
     [JsonPropertyName("languageCode")]

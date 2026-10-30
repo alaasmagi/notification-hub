@@ -24,6 +24,55 @@ public class EmailCommandReaderTests
         "content":{"to":"client@example.com","languageCode":"en","model":{"invoiceNumber":"2026-10","amount":"97.87","currency":"EUR","dueDate":"2026-11-14"}}}
         """;
 
+    private const string Verification = """
+        {"id":"verification-message","source":"identity-hub","tenant":"invoice-service","action":"email-user-verify",
+        "timestamp":"2026-10-30T11:09:56.288Z","contentVersion":"1.0",
+        "content":{"userId":"test-user","email":"user@example.com","fullName":"Test User",
+        "actionLink":"https://identity.example.com/verify?key=dummy&client_id=test",
+        "expiresAt":"2026-10-30T11:14:56.288826006Z","validForMinutes":5}}
+        """;
+
+    [Fact]
+    public async Task LiveFlatContract_MapsAndRendersExistingVerificationFields()
+    {
+        var request = Read("identity-hub.invoice-service.email-user-verify", Verification);
+        Assert.NotNull(request);
+        Assert.True(request.IsValid());
+        Assert.Equal("verification-message", request.MessageId);
+        Assert.Equal(request.MessageId, request.CorrelationId);
+        Assert.Equal("user@example.com", request.ToEmail);
+        Assert.Equal("en", request.LanguageCode);
+        Assert.Equal("email-user-verify", request.NotificationType);
+        Assert.Equal("Test User", request.Content.Properties["FullName"]);
+        Assert.Equal(5L, request.Content.Properties["ValidForMinutes"]);
+        Assert.False(request.HasExpired(DateTimeOffset.Parse("2026-10-30T11:14:55Z")));
+        Assert.True(request.HasExpired(DateTimeOffset.Parse("2026-10-30T11:14:57Z")));
+        var rendered = await new RazorEmailTemplateRenderer().RenderAsync(
+            new Template
+            {
+                Id = Guid.NewGuid(), Title = "Confirm your email address",
+                Body = """
+                    @{ var name = string.IsNullOrWhiteSpace((string)Model.FullName) ? "there" : (string)Model.FullName; }
+                    Hi @name. Link expires in @Model.ValidForMinutes minutes.
+                    <a href="@Model.ActionLink">Verify</a>
+                    """
+            },
+            new EmailTemplateModel { Content = request.Content, Locale = "en", Fmt = new LocaleFormatter("en"), Branding = new EmailBranding() });
+        Assert.Contains("Hi Test User. Link expires in 5 minutes.", rendered.HtmlBody);
+        Assert.Contains("https://identity.example.com/verify?key=dummy&amp;client_id=test", rendered.HtmlBody);
+    }
+
+    [Fact]
+    public void FlatContract_UsesLocaleAndAcceptsArbitraryCommand()
+    {
+        var json = Verification.Replace("email-user-verify", "custom-command")
+            .Replace("\"validForMinutes\":5", "\"validForMinutes\":5,\"locale\":\"et\"");
+        var request = Read("identity-hub.invoice-service.custom-command", json);
+        Assert.NotNull(request);
+        Assert.Equal("et", request.LanguageCode);
+        Assert.Equal("custom-command", request.NotificationType);
+    }
+
     [Theory]
     [InlineData(Reset, "identity-hub.food-app.password-reset", "user@example.com", "et", "UserName", "Test User")]
     [InlineData(Invoice, "invoice-service.invoice-service.monthly-invoice", "client@example.com", "en", "InvoiceNumber", "2026-10")]

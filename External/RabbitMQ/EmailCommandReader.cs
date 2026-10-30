@@ -34,12 +34,17 @@ public class EmailCommandReader
         if (dto is null || route.Length != 3 || route.Any(string.IsNullOrWhiteSpace)
             || route[0] != dto.Source || route[1] != dto.Tenant || route[2] != dto.Action
             || string.IsNullOrWhiteSpace(dto.ContentVersion) || dto.ContentVersion.Split('.')[0] != "1"
-            || dto.Content is null || dto.Content.Model.ValueKind != JsonValueKind.Object)
+            || dto.Content is null)
         {
             _logger.LogWarning("Rejecting message: invalid envelope, routing key or content. RoutingKey: {RoutingKey}", routingKey);
             return null;
         }
 
-        return _mapper.Map(dto with { RoutingKey = routingKey });
+        var request = _mapper.Map(dto with { RoutingKey = routingKey });
+        if (request is null)
+        {
+            _logger.LogWarning("Rejecting message: expected content.model object or flat content.email. RoutingKey: {RoutingKey}", routingKey);
+        }
+        return request;
     }
 }
