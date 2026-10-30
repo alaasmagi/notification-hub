@@ -24,7 +24,6 @@ public class RazorEmailTemplateRenderer : IEmailTemplateRenderer
         EmailTemplateModel model,
         CancellationToken cancellationToken = default)
     {
-        // Templates bind to the concrete content type; branding and locale helpers remain in ViewBag.
         var content = (object)model.Content;
 
         dynamic viewBag = new ExpandoObject();

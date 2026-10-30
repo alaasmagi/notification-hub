@@ -1,7 +1,7 @@
+using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
 using Base.Contracts.Message;
-using Base.Keycloak.Events;
 using Base.Message;
 using Contracts.Application;
 using Contracts.External.Models;
@@ -64,6 +64,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         }
 
         var keySource = segments[0];
+        var keyTenant = segments[1];
         var keyAction = segments[2];
 
         // The broker authenticates the routing key, not the payload source.
@@ -75,7 +76,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
             return MessageDisposition.RejectNoRequeue;
         }
 
-        if (string.IsNullOrWhiteSpace(envelope.Tenant))
+        if (string.IsNullOrWhiteSpace(keyTenant))
         {
             _logger.LogWarning("Rejecting message: tenant is missing. Id: {Id}, Source: {Source}", envelope.Id, keySource);
             return MessageDisposition.RejectNoRequeue;
@@ -89,11 +90,10 @@ public class EmailCommandProcessor : IEmailCommandProcessor
             return MessageDisposition.RejectNoRequeue;
         }
 
-        var content = DeserializeContent(keyAction, envelope.Content);
-        if (content is null)
+        if (envelope.Content.ValueKind != JsonValueKind.Object)
         {
             _logger.LogWarning(
-                "Rejecting message: unknown or unparseable action content. Id: {Id}, Source: {Source}, Action: {Action}",
+                "Rejecting message: content must be a JSON object. Id: {Id}, Source: {Source}, Action: {Action}",
                 envelope.Id, keySource, keyAction);
             return MessageDisposition.RejectNoRequeue;
         }
@@ -113,7 +113,7 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         {
             _logger.LogInformation(
                 "Dropping expired message without sending. Id: {Id}, Source: {Source}, Tenant: {Tenant}, Action: {Action}",
-                envelope.Id, keySource, envelope.Tenant, keyAction);
+                envelope.Id, keySource, keyTenant, keyAction);
             return MessageDisposition.Ack;
         }
 
@@ -122,12 +122,12 @@ public class EmailCommandProcessor : IEmailCommandProcessor
             {
                 MessageId = envelope.Id,
                 Source = keySource,
-                Tenant = envelope.Tenant,
+                Tenant = keyTenant,
                 NotificationType = keyAction,
                 ToEmail = recipient,
                 LanguageCode = string.IsNullOrWhiteSpace(locale) ? "en" : locale,
                 CorrelationId = envelope.Id,
-                Content = content
+                Content = ConvertContent(envelope.Content)!
             },
             cancellationToken);
 
@@ -152,24 +152,31 @@ public class EmailCommandProcessor : IEmailCommandProcessor
         return string.Equals(major, SupportedContentMajor, StringComparison.Ordinal);
     }
 
-    private static object? DeserializeContent(string action, JsonElement content)
+    private static object? ConvertContent(JsonElement content)
     {
-        try
+        switch (content.ValueKind)
         {
-            return action switch
-            {
-                "user-verify" => content.Deserialize<VerifyEmailContent>(EnvelopeOptions),
-                "user-2fa-otp" => content.Deserialize<OtpEmailContent>(EnvelopeOptions),
-                "user-password-reset" => content.Deserialize<PasswordResetContent>(EnvelopeOptions),
-                "invoice" => content.Deserialize<InvoiceEmailContent>(EnvelopeOptions),
-                "lunch-recommendation" => content.Deserialize<LunchRecommendationEmailContent>(EnvelopeOptions),
-                _ => null
-            };
-        }
-        catch (JsonException)
-        {
-            // Wrong shape for this action (missing required field, bad type) → permanent.
-            return null;
+            case JsonValueKind.Object:
+                IDictionary<string, object?> model = new ExpandoObject();
+                foreach (var property in content.EnumerateObject())
+                {
+                    model[property.Name] = ConvertContent(property.Value);
+                }
+                return model;
+            case JsonValueKind.Array:
+                return content.EnumerateArray().Select(ConvertContent).ToList();
+            case JsonValueKind.String:
+                return content.GetString();
+            case JsonValueKind.Number:
+                if (content.TryGetInt64(out var integer)) return integer;
+                if (content.TryGetDecimal(out var number)) return number;
+                return content.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            default:
+                return null;
         }
     }
 
